@@ -373,9 +373,9 @@ def plot_images_and_dfts(
     plt.suptitle(
         f"Transient gradient artifact filtering with smooth & periodic component "
         f"decomposition ([Moisan, 2010]) for image in '{fname}'\n"
-        f"Filtering parameters : cutout dims (w/h) = {flt.cutout_size_horizontal}/{flt.cutout_size_vertical} , "
-        f"ellipse long axis length = {flt.ellipse_long_axis_length}, "
-        f"ellipse short axis length = {flt.ellipse_short_axis_length}\n"
+        f"Filtering parameters : cutout dims (w/h) = {flt.cutout_size_horizontal}/{flt.cutout_size_vertical} pixels, "
+        f"ellipse long axis length = {flt.ellipse_long_axis_length} pixels, "
+        f"ellipse short axis length = {flt.ellipse_short_axis_length} pixels\n"
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
         f"extent λ = {artifact.extent_λ:.1f} nm, "
         f"extent t = {artifact.extent_t:.2f} ps\n"
@@ -485,14 +485,6 @@ def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
     img_binary_final: np.ndarray = cv.morphologyEx(
         img_binary_open, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8)
     )
-    """
-    img_binary_close: np.ndarray = cv.morphologyEx(
-        img_binary, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8)
-    )
-    img_binary_final: np.ndarray = cv.morphologyEx(
-        img_binary_close, cv.MORPH_OPEN, np.ones((3, 3), np.uint8)
-    )
-    """
 
     return img_binary_final
 
@@ -601,8 +593,8 @@ def define_filter_parameters(
 
     # Draw the binary images for visual validation
     fig, ax = plt.subplots(1, 2)
-    ax[0].set(title="Cutout")
-    ax[1].set(title="Ellipse")
+    ax[0].set(title=f"Cutout (threshold = {binary_threshold_cutout:.2f})")
+    ax[1].set(title=f"Ellipse (threshold = {binary_threshold_ellipse:.2f})")
     ax[0].imshow(img_binary_cutout, cmap="gray")
     img_binary_ellipse[artifact_long_diagonal_pixel_coordinates] = 1
     img_binary_ellipse[tuple(ellipse_long_axis_pixels_coordinates)] = 0
