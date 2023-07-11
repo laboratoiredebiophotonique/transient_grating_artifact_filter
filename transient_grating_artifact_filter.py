@@ -205,8 +205,8 @@ class Filter:
 
         # Return filter, either filled (with Gaussian blur) or outlined ellipse
         return (
-            # cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0).astype(np.float64)
-            filter_image.astype(np.float64)
+            cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0).astype(np.float64)
+            #filter_image.astype(np.float64)
             if self.fill_ellipse
             else filter_image.astype(np.float64)
         )
@@ -468,12 +468,10 @@ def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
 
     """
 
-    # Normalize image to [0, 1] dynamic range.<
-    # NB: First threshold pixel values at 0 else small pixel values
-    # (i.e. values below 0) will skew the normalization since pixel values are on a log scale.
-    img[img < 0] = 0
-    img_normalized: np.ndarray = np.zeros(img.shape)
-    cv.normalize(img, img_normalized, 0, 1.0, cv.NORM_MINMAX)
+    # Normalize image to [0, 1], limit to 4 decades of dynamic range, else small pixel values
+    # will skew the normalization since values are on a log scale.
+    img[img < np.amax(img) - 4] = np.amax(img) - 4
+    img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
 
     # Binarize image with the threshold, then perform morphological opening and closing to clean it up
     img_binary: np.ndarray = cv.threshold(
@@ -786,7 +784,11 @@ def main():
     """
 
     # Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
-    substrate_type: str = "gold_film"
+    substrate_type: str = "rhodamine"
+
+    # Thresholds for filter construction
+    binary_threshold_ellipse = 0.3
+    binary_threshold_cutout = 0.5
 
     # Filter design & debugging: if False, draw ellipse outline only
     filter_fill_ellipse: bool = True
@@ -799,10 +801,6 @@ def main():
         artifact_extent_λ: float = 26
         artifact_extent_t: float = 0.35
 
-        # Thresholds for filter construction
-        binary_threshold_ellipse = 0.22
-        binary_threshold_cutout = 0.5
-
     elif substrate_type == "nano_pillars":
         # Nano-pillars
         fname = "Data_ROD_600_long.mat"
@@ -810,20 +808,12 @@ def main():
         artifact_extent_λ = 25
         artifact_extent_t = 0.47
 
-        # Thresholds for filter construction
-        binary_threshold_ellipse = 0.3
-        binary_threshold_cutout = 0.5
-
     elif substrate_type == "rhodamine":
         # Rhodamine solution
         fname = "Data_Rhodamine_570_2.mat"
         λ0_pump = 570.0
         artifact_extent_λ = 20
         artifact_extent_t = 0.55
-
-        # Thresholds for filter construction
-        binary_threshold_ellipse = 0.3
-        binary_threshold_cutout = 0.5
 
     else:
         raise ValueError("Unknown substrate type!")
