@@ -808,8 +808,8 @@ def main():
         artifact_extent_t: float = 0.35
 
         # Thresholds for filter construction
-        binary_threshold_ellipse: float = 0.22
-        binary_threshold_cutout: float = 0.5
+        binary_threshold_ellipse = 0.22
+        binary_threshold_cutout = 0.5
 
     elif substrate_type == "nano_pillars":
         # Nano-pillars
@@ -819,8 +819,8 @@ def main():
         artifact_extent_t = 0.47
 
         # Thresholds for filter construction
-        binary_threshold_ellipse: float = 0.3
-        binary_threshold_cutout: float = 0.5
+        binary_threshold_ellipse = 0.3
+        binary_threshold_cutout = 0.5
 
     elif substrate_type == "rhodamine":
         # Rhodamine solution
@@ -830,8 +830,8 @@ def main():
         artifact_extent_t = 0.55
 
         # Thresholds for filter construction
-        binary_threshold_ellipse: float = 0.3
-        binary_threshold_cutout: float = 0.5
+        binary_threshold_ellipse = 0.3
+        binary_threshold_cutout = 0.5
 
     else:
         raise ValueError("Unknown substrate type!")
