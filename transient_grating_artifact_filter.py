@@ -179,7 +179,7 @@ class Filter:
             -1 if self.fill_ellipse else 1,
         )
 
-        # Draw cross cutout at the center of the ellipse
+        # Draw rectangle cutout at the center of the ellipse
         filter_image[
             filter_image.shape[1] // 2
             - self.cutout_size_vertical // 2 : filter_image.shape[1] // 2
@@ -189,6 +189,7 @@ class Filter:
             + self.cutout_size_horizontal // 2,
         ] = 1
         """
+        # Draw cross cutout at the center of the ellipse
         filter_image[
             filter_image.shape[1] // 2
             - self.cutout_size_vertical // 2 : filter_image.shape[1] // 2
@@ -446,11 +447,11 @@ def interpolate_image(u_in: np.ndarray, dim: int) -> np.ndarray:
 
     """
 
-    x = np.linspace(0, 1, u_in.shape[1])
-    y = np.linspace(0, 1, u_in.shape[0])
-    interp = RegularGridInterpolator((y, x), u_in)
-    xi = np.linspace(0, 1, dim)
-    yi = np.linspace(0, 1, dim)
+    x: np.ndarray = np.linspace(0, 1, u_in.shape[1])
+    y: np.ndarray = np.linspace(0, 1, u_in.shape[0])
+    interp: RegularGridInterpolator = RegularGridInterpolator((y, x), u_in)
+    xi: np.ndarray = np.linspace(0, 1, dim)
+    yi: np.ndarray = np.linspace(0, 1, dim)
     xx, yy = np.meshgrid(xi, yi, indexing="ij")
 
     return interp((xx, yy))
@@ -507,7 +508,7 @@ def calc_line_length(
     line_pixel_coordinate_indices: np.ndarray = np.asarray(
         np.where(diagonal_pixel_values == 1)
     ).flatten()
-    line_pixel_coordinates = np.asarray(
+    line_pixel_coordinates: np.ndarray = np.asarray(
         [
             diagonal_pixel_coordinates[0][line_pixel_coordinate_indices],
             diagonal_pixel_coordinates[1][line_pixel_coordinate_indices],
@@ -573,13 +574,13 @@ def define_filter_parameters(
     )
     x0, y0 = img.shape[1] // 2, img.shape[0] // 2
     l: float = img.shape[0] / 4
-    artifact_long_diagonal_pixel_coordinates = line(
+    artifact_long_diagonal_pixel_coordinates: np.ndarray = line(
         r0=int(y0 - l * np.sin(np.radians(artifact.angle))),
         c0=int(x0 + l * np.cos(np.radians(artifact.angle))),
         r1=int(y0 + l * np.sin(np.radians(artifact.angle))),
         c1=int(x0 - l * np.cos(np.radians(artifact.angle))),
     )
-    artifact_short_diagonal_pixel_coordinates = line(
+    artifact_short_diagonal_pixel_coordinates: np.ndarray = line(
         r0=int(y0 - l * np.sin(np.radians(artifact.angle + 90))),
         c0=int(x0 + l * np.cos(np.radians(artifact.angle + 90))),
         r1=int(y0 + l * np.sin(np.radians(artifact.angle + 90))),
@@ -660,7 +661,7 @@ def transient_grating_artifact_filter(
     # Load 2D spectroscopy image data from matlab file, interpolate to 1024 x 1024
     matlab_data: dict = loadmat(f"data/{fname}")
     u_in: np.ndarray = np.rot90(matlab_data["Data"])
-    u = interpolate_image(u_in=u_in, dim=1024)
+    u: np.ndarray = interpolate_image(u_in=u_in, dim=1024)
     u_dft: np.ndarray = np.fft.fft2(u)
 
     # Create ImageSpecs class object containing spectroscopy image specifications
@@ -791,11 +792,11 @@ def main():
     """
 
     # Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
-    substrate_type: str = "rhodamine"
+    substrate_type: str = "gold_film"
 
     # Thresholds for filter construction
-    binary_threshold_ellipse = 0.3
-    binary_threshold_cutout = 0.5
+    binary_threshold_ellipse: float = 0.3
+    binary_threshold_cutout: float = 0.5
 
     # Filter design & debugging: if False, draw ellipse outline only
     filter_fill_ellipse: bool = True
@@ -803,7 +804,7 @@ def main():
     # Define simulation parameters for the selected structure
     if substrate_type == "gold_film":
         # Smooth unstructured gold film
-        fname = "Figure_article_Parallel.mat"
+        fname: str = "Figure_article_Parallel.mat"
         λ0_pump: float = 600.0
         artifact_extent_λ: float = 26
         artifact_extent_t: float = 0.35
