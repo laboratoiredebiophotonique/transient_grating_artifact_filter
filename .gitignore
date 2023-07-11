@@ -186,3 +186,5 @@ fabric.properties
 .idea/mypy.xml
 
 /output/*.png
+/output/*.mat
+/Moisan2011/code on GitHub/moisan2011-master.zip
