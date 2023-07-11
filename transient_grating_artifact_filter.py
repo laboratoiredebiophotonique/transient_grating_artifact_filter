@@ -372,7 +372,8 @@ def plot_images_and_dfts(
     plt.suptitle(
         f"Transient gradient artifact filtering with smooth & periodic component "
         f"decomposition ([Moisan, 2010]) for image in '{fname}'\n"
-        f"Filtering parameters : cutout dims (w/h) = {flt.cutout_size_horizontal}/{flt.cutout_size_vertical} pixels, "
+        "Filtering parameters : cutout dims (w/h) = "
+        "{flt.cutout_size_horizontal}/{flt.cutout_size_vertical} pixels, "
         f"ellipse long axis length = {flt.ellipse_long_axis_length} pixels, "
         f"ellipse short axis length = {flt.ellipse_short_axis_length} pixels\n"
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
@@ -467,12 +468,12 @@ def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
 
     """
 
-    # Normalize image to [0, 1], limit to 4 decades of dynamic range, else small pixel values
-    # will skew the normalization since values are on a log scale.
+    # Normalize image to [0, 1], limit to 4 decades of dynamic range, else small pixel
+    # values will skew the normalization since values are on a log scale.
     img[img < np.amax(img) - 4] = np.amax(img) - 4
     img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
 
-    # Binarize image with the threshold, then perform morphological opening and closing to clean it up
+    # Binarize image with threshold, perform morpho opening and closing to clean up
     img_binary: np.ndarray = cv.threshold(
         img_normalized, threshold, 1, cv.THRESH_BINARY
     )[1]
@@ -494,7 +495,7 @@ def calc_line_length(
 
     Args:
         img_binary (np.ndarray): binary image to be analyzed
-        diagonal_pixel_coordinates (np.ndarray): array of pixel coordinates along the diagonal
+        diagonal_pixel_coordinates (np.ndarray): array of pixel coordinates along diagonal
 
     Returns: line length (int), line pixel coordinates (np.ndarray)
 
@@ -532,16 +533,21 @@ def define_filter_parameters(
     (ellipse long & short axis, cutout width & height)
 
     Args:
-        img: image used to calcule filter parameters (magnitude of the periodic component DFT)
+        img: image used to calculate filter parameters (magnitude of the periodic
+             component DFT)
         artifact: Artifact class object
-        binary_threshold_ellipse: threshold value for converting image to binary to identify ellipse ([0, 1]
-        binary_threshold_cutout: threshold value for converting image to binary to identify cutout ([0, 1]
+        binary_threshold_ellipse: threshold value for converting image to binary
+                                  to identify ellipse ([0, 1]
+        binary_threshold_cutout: threshold value for converting image to binary
+                                 to identify cutout ([0, 1]
 
-    Returns: ellipse_long_axis_length (int), ellipse_short_axis_length (int), cut_out_width (int), cut_out_height (int)
+    Returns: ellipse_long_axis_length (int), ellipse_short_axis_length (int),
+             cut_out_width (int), cut_out_height (int)
 
     """
 
-    # Determine cutout height & width (width/height of pixel area around the origin above threshold in binary image )
+    # Determine cutout height & width (width/height of pixel rectangle around the origin
+    # above threshold in binary image)
     img_binary_cutout: np.ndarray = binarize_image(
         img=img, threshold=binary_threshold_cutout
     )
@@ -628,8 +634,10 @@ def transient_grating_artifact_filter(
         λ0_pump (float): Pump central wavelength (nm)
         artifact_extent_λ (float): Artifact extent in the λ direction (nm)
         artifact_extent_t (float): Artifact extent in the t direction (ps)
-        binary_threshold_ellipse (float): threshold for converting image to binary for ellipse ([0..1])
-        binary_threshold_cutout (float): threshold for converting image to binary fur cutout ([0..1])
+        binary_threshold_ellipse (float): threshold for converting image to binary
+                                          for ellipse ([0..1])
+        binary_threshold_cutout (float): threshold for converting image to binary
+                                         fur cutout ([0..1])
         filter_fill_ellipse (bool): see Filter Class docstring
 
     Returns: None
@@ -671,7 +679,7 @@ def transient_grating_artifact_filter(
         img_specs=img_specs,
     )
 
-    # Extract periodic and smooth component DFTs, calculate their images from inverse DFTs
+    # Extract periodic and smooth component DFTs, calculate images from inverse DFTs
     p_dft, s_dft = per(u, inverse_dft=False)
     p_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(p_dft)) + 1e-10)
     s_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(s_dft)) + 1e-10)
