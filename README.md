@@ -27,6 +27,6 @@ User-specified parameters:
 - extent_λ
 
 *Filter* class object (see class definition for details):
-- cutout_size
-- ellipse_long_axis_radius
-- ellipse_short_axis_radius
+- binary_threshold_ellipse
+- binary_threshold_cutout
+
