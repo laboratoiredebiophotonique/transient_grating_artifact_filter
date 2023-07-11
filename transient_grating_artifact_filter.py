@@ -14,13 +14,14 @@ NB:
 
 """
 
-import cv2 as cv
 from dataclasses import dataclass
+
+import cv2 as cv
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from moisan2011 import per
-import numpy as np
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator
 from scipy.io import loadmat, savemat
@@ -187,10 +188,24 @@ class Filter:
             - self.cutout_size_horizontal // 2 : filter_image.shape[0] // 2
             + self.cutout_size_horizontal // 2,
         ] = 1
+        """
+        filter_image[
+            filter_image.shape[1] // 2
+            - self.cutout_size_vertical // 2 : filter_image.shape[1] // 2
+            + self.cutout_size_vertical // 2,
+            :,
+        ] = 1
+        filter_image[
+            :,
+            filter_image.shape[0] // 2
+            - self.cutout_size_horizontal // 2 : filter_image.shape[0] // 2
+            + self.cutout_size_horizontal // 2,
+        ] = 1
+        """
 
         # Return filter, either filled (with Gaussian blur) or outlined ellipse
         return (
-            #cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0).astype(np.float64)
+            # cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0).astype(np.float64)
             filter_image.astype(np.float64)
             if self.fill_ellipse
             else filter_image.astype(np.float64)
@@ -467,11 +482,19 @@ def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
     img_binary_open: np.ndarray = cv.morphologyEx(
         img_binary, cv.MORPH_OPEN, np.ones((3, 3), np.uint8)
     )
-    img_binary_close: np.ndarray = cv.morphologyEx(
+    img_binary_final: np.ndarray = cv.morphologyEx(
         img_binary_open, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8)
     )
+    """
+    img_binary_close: np.ndarray = cv.morphologyEx(
+        img_binary, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8)
+    )
+    img_binary_final: np.ndarray = cv.morphologyEx(
+        img_binary_close, cv.MORPH_OPEN, np.ones((3, 3), np.uint8)
+    )
+    """
 
-    return img_binary_close
+    return img_binary_final
 
 
 def calc_line_length(
@@ -601,8 +624,8 @@ def transient_grating_artifact_filter(
     λ0_pump: float,
     artifact_extent_λ: float,
     artifact_extent_t: float,
-    binary_threshold_ellipse:float,
-    binary_threshold_cutout:float,
+    binary_threshold_ellipse: float,
+    binary_threshold_cutout: float,
     filter_fill_ellipse: bool,
 ):
     """
@@ -776,10 +799,6 @@ def main():
     # Filter design & debugging: if False, draw ellipse outline only
     filter_fill_ellipse: bool = True
 
-    # Thresholds for filter construction
-    binary_threshold_ellipse: float = 0.2
-    binary_threshold_cutout: float = 0.5
-
     # Define simulation parameters for the selected structure
     if substrate_type == "gold_film":
         # Smooth unstructured gold film
@@ -788,6 +807,10 @@ def main():
         artifact_extent_λ: float = 26
         artifact_extent_t: float = 0.35
 
+        # Thresholds for filter construction
+        binary_threshold_ellipse: float = 0.22
+        binary_threshold_cutout: float = 0.5
+
     elif substrate_type == "nano_pillars":
         # Nano-pillars
         fname = "Data_ROD_600_long.mat"
@@ -795,12 +818,20 @@ def main():
         artifact_extent_λ = 25
         artifact_extent_t = 0.47
 
+        # Thresholds for filter construction
+        binary_threshold_ellipse: float = 0.3
+        binary_threshold_cutout: float = 0.5
+
     elif substrate_type == "rhodamine":
         # Rhodamine solution
         fname = "Data_Rhodamine_570_2.mat"
         λ0_pump = 570.0
         artifact_extent_λ = 20
         artifact_extent_t = 0.55
+
+        # Thresholds for filter construction
+        binary_threshold_ellipse: float = 0.3
+        binary_threshold_cutout: float = 0.5
 
     else:
         raise ValueError("Unknown substrate type!")
