@@ -206,7 +206,6 @@ class Filter:
         # Return filter, either filled (with Gaussian blur) or outlined ellipse
         return (
             cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0).astype(np.float64)
-            #filter_image.astype(np.float64)
             if self.fill_ellipse
             else filter_image.astype(np.float64)
         )
