@@ -533,10 +533,10 @@ def define_filter_parameters(
     img_binary_cutout: np.ndarray = binarize_image(
         img=img, threshold=binary_threshold_cutout
     )
-    horizontal_axis_pixels_above_threshold_coordinates: tuple = np.where(
+    horizontal_axis_pixels_above_threshold_coordinates = np.where(
         img_binary_cutout[img_binary_cutout.shape[0] // 2, :] == 1
     )
-    vertical_axis_pixels_above_threshold_coordinates: tuple = np.where(
+    vertical_axis_pixels_above_threshold_coordinates = np.where(
         img_binary_cutout[:, img_binary_cutout.shape[1] // 2] == 1
     )
     min_x, max_x = min(horizontal_axis_pixels_above_threshold_coordinates[0]), max(

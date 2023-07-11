@@ -1,0 +1,10 @@
+matplotlib==3.7.2
+moisan2011==1.0
+numpy==1.25.1
+opencv-python==4.8.0.74
+openpyxl==3.1.2
+pathlib==1.0.1
+Pillow==10.0.0
+scikit-image==0.21.0
+scipy==1.11.1
+sympy==1.12
