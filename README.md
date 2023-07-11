@@ -17,7 +17,7 @@ NB:
   the different "per" operators (per, rper, ...)
 
 Calling the script:
-moisan_smooth_periodic(...)
+transient_grating_artifact_filter(...)
 
 User-specified parameters:
 

@@ -185,8 +185,4 @@ fabric.properties
 # .idea
 .idea/mypy.xml
 
-/output/hut-648x364.png
-/output/moisan_per.png
-/output/moisan_rper.png
-/output/
-/archive/
+/output/*.png
