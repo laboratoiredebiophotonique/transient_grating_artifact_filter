@@ -23,9 +23,11 @@ from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator
 from scipy.io import loadmat, savemat
 from skimage.draw import line
+import sys
+from typing import Tuple
 
 # Script version
-__version__: str = "1.5"
+__version__: str = "1.6"
 
 
 @dataclass
@@ -489,7 +491,7 @@ def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
 
 def calc_line_length(
     img_binary: np.ndarray, diagonal_pixel_coordinates: np.ndarray
-) -> tuple[int, np.ndarray]:
+) -> Tuple[int, np.ndarray]:
     """
     Calculate the length of a line in a binary image along a diagonal
 
@@ -526,7 +528,7 @@ def define_filter_parameters(
     artifact: Artifact,
     threshold_ellipse: float,
     threshold_cutout: float,
-) -> tuple[int, int, int, int]:
+) -> Tuple[int, int, int, int]:
     """
 
     Determine filter parameters from periodic component DFT magnitude
@@ -861,9 +863,15 @@ def main():
         filter_fill_ellipse=filter_fill_ellipse,
     )
 
+    # If running from the command line, pause for user input to keep figures visible.
+    # If running in PyCharm debugger, set breakpoint below eto keep figures visible
+    if sys.gettrace() is not None:
+        print("Breakpoint here to keep figures visible in IDE!")
+    else:
+        input("Script paused to display figures, press any key to exit...")
+
     return None
 
 
 if __name__ == "__main__":
     main()
-    print("Done!")
