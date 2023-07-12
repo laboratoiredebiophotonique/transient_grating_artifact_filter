@@ -581,25 +581,34 @@ def define_filter_parameters(
         r1=int(y0 + l * np.sin(np.radians(artifact.angle + 90))),
         c1=int(x0 - l * np.cos(np.radians(artifact.angle + 90))),
     )
-    ellipse_long_axis_length, ellipse_long_axis_pixels_coordinates = calc_line_length(
+    ellipse_long_axis_length, _ = calc_line_length(
         img_binary=img_binary_ellipse,
         diagonal_pixel_coordinates=artifact_long_diagonal_pixel_coordinates,
     )
-    ellipse_short_axis_length, ellipse_short_axis_pixels_coordinates = calc_line_length(
+    ellipse_short_axis_length, _ = calc_line_length(
         img_binary=img_binary_ellipse,
         diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
     )
 
-    # Draw the binary images for visual validation
+    # Draw the cutout and ellipse binary images for visual validation and tweaking
     fig, ax = plt.subplots(1, 2)
-    ax[0].set(title=f"Cutout (threshold = {threshold_cutout:.2f})")
-    ax[1].set(title=f"Ellipse (threshold = {threshold_ellipse:.2f})")
-    ax[0].imshow(img_binary_cutout, cmap="gray")
-    img_binary_ellipse[artifact_long_diagonal_pixel_coordinates] = 1
-    img_binary_ellipse[tuple(ellipse_long_axis_pixels_coordinates)] = 0
-    img_binary_ellipse[artifact_short_diagonal_pixel_coordinates] = 1
-    img_binary_ellipse[tuple(ellipse_short_axis_pixels_coordinates)] = 0
-    ax[1].imshow(img_binary_ellipse, cmap="gray")
+    ax[0].set(
+        title=f"Cutout (threshold = {threshold_cutout:.2f}, "
+        f"width = {cut_out_width} pixels, height = {cut_out_height} pixels)"
+    )
+    img_binary_cutout_rgb = np.repeat(img_binary_cutout[:, :, np.newaxis], 3, axis=2)
+    img_binary_cutout_rgb[y0, :, :] = [1, 0, 0]
+    img_binary_cutout_rgb[:, x0, :] = [1, 0, 0]
+    ax[0].imshow(img_binary_cutout_rgb, cmap="gray")
+    ax[1].set(
+        title=f"Ellipse (threshold = {threshold_ellipse:.2f}, "
+        f"long axis = {ellipse_long_axis_length} pixels, "
+        f"short axis = {ellipse_short_axis_length} pixels)"
+    )
+    img_binary_ellipse_rgb = np.repeat(img_binary_ellipse[:, :, np.newaxis], 3, axis=2)
+    img_binary_ellipse_rgb[artifact_long_diagonal_pixel_coordinates] = [1, 0, 0]
+    img_binary_ellipse_rgb[artifact_short_diagonal_pixel_coordinates] = [1, 0, 0]
+    ax[1].imshow(img_binary_ellipse_rgb, cmap="gray")
     plt.suptitle("Binary images for filter component determination")
 
     return (
@@ -661,8 +670,9 @@ def transient_grating_artifact_filter(
             f"Matlab input file '{fname}' array dimensions are inconsistent"
         )
 
-    # Interpolate image to make 1024x1024 (square, power of 2 dimensions), calculate DFT
-    img: np.ndarray = interpolate_image(img=img_in, dim=1024)
+    # Interpolate image to make it square to the next power of 2, calculate DFT
+    dim_power_of_2: int = int(2 ** np.ceil(np.log10(max(img_in.shape)) / np.log10(2)))
+    img: np.ndarray = interpolate_image(img=img_in, dim=dim_power_of_2)
     img_dft: np.ndarray = np.fft.fft2(img)
     img_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(img_dft)) + 1e-10)
 
@@ -774,9 +784,9 @@ def transient_grating_artifact_filter(
             "smooth": smooth,
             "img_filtered": img_filtered,
             "periodic_filtered": periodic_filtered,
-            "Wavelength": img_specs.λs,
+            "Wavelengths": img_specs.λs,
             "Time": img_specs.ts,
-            "f": flt.f,
+            "filter_2D": flt.f,
             "img_dft": img_dft,
             "img_filtered_dft": img_filtered_dft,
             "periodic_dft": periodic_dft,
