@@ -30,7 +30,7 @@ Function parameters:
 
 *Filter* class object parameters (see class definition for details):
 - *threshold_ellipse*: threshold for filter ellipse identification ([0..1])
-- *threshold_cutout*: threshold for filter cutoff identification ([0..1])
+- *threshold_cutout*: threshold for filter central rectangular cutout identification ([0..1])
 
 Output:
 - Files written to the *output* subdirectory
