@@ -25,7 +25,7 @@ from scipy.io import loadmat, savemat
 from skimage.draw import line
 
 # Script version
-__version__: str = "1.0"
+__version__: str = "1.5"
 
 
 @dataclass
