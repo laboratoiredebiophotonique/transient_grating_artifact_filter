@@ -134,9 +134,9 @@ class Filter:
     cutout_size_vertical (int): height of rectangle cutout from the ellipse (pixels)
     ellipse_long_axis_length (int): long axis of the ellipse filter (pixels)
     ellipse_short_axis_length (int): short axis of the ellipse filter (pixels)
-    fill_ellipse (bool): fill ellipse (False for outline only for debugging)
     img_specs (ImageSpecs): image specifications
     artifact (Artifact): artifact specifications
+    fill_ellipse (bool): fill ellipse (False for outline only for debugging, default is True)
 
     """
 
@@ -144,9 +144,9 @@ class Filter:
     cutout_size_vertical: int
     ellipse_long_axis_length: int
     ellipse_short_axis_length: int
-    fill_ellipse: bool
     img_specs: ImageSpecs
     artifact: Artifact
+    fill_ellipse: bool = True
 
     def __post_init__(self):
         self.f: np.ndarray = self.build_filter()
@@ -210,8 +210,8 @@ class Filter:
 
 
 def plot_λ0_and_normal_line_profiles(
-    u: np.ndarray,
-    uf: np.ndarray,
+    img: np.ndarray,
+    img_filtered: np.ndarray,
     img_specs: ImageSpecs,
     artifact: Artifact,
 ) -> Figure:
@@ -219,8 +219,8 @@ def plot_λ0_and_normal_line_profiles(
     Plot line profiles vertically at λ0 and along the normal to the artifact
 
     Args:
-        u (np.ndarray): original image
-        uf (np.ndarray): filtered image
+        img (np.ndarray): original image
+        img_filtered (np.ndarray): filtered image
         img_specs (ImageSpecs): image parameters
         artifact (Artifact): artifact parameters
 
@@ -233,14 +233,16 @@ def plot_λ0_and_normal_line_profiles(
     x, y = np.linspace(
         artifact.normal_x0_pixels, artifact.normal_x1_pixels, num
     ), np.linspace(artifact.normal_y0_pixels, artifact.normal_y1_pixels, num)
-    normal_profile: np.ndarray = np.flip(ndimage.map_coordinates(u, np.vstack((y, x))))
+    normal_profile: np.ndarray = np.flip(
+        ndimage.map_coordinates(img, np.vstack((y, x)))
+    )
     normal_profile_filtered: np.ndarray = np.flip(
-        ndimage.map_coordinates(uf, np.vstack((y, x)))
+        ndimage.map_coordinates(img_filtered, np.vstack((y, x)))
     )
 
     # Vertical line profiles (raw & filtered) at λ0
-    λ0_profile: np.ndarray = np.flip(u[:, artifact.λ0_pixels])
-    λ0_profile_filtered: np.ndarray = np.flip(uf[:, artifact.λ0_pixels])
+    λ0_profile: np.ndarray = np.flip(img[:, artifact.λ0_pixels])
+    λ0_profile_filtered: np.ndarray = np.flip(img_filtered[:, artifact.λ0_pixels])
 
     # Plot line profiles and their DFTs
     normal_profile_dft: np.ndarray = np.fft.fft(normal_profile)
@@ -432,21 +434,21 @@ def plot_images_and_dfts(
     return fig
 
 
-def interpolate_image(u_in: np.ndarray, dim: int) -> np.ndarray:
+def interpolate_image(img: np.ndarray, dim: int) -> np.ndarray:
     """
     Interpolate image to dim x dim
 
     Args:
-        u_in (np.ndarray): original input image
+        img (np.ndarray): original input image
         dim (int): output image dimension in both axes
 
     Returns: interpolated image
 
     """
 
-    x: np.ndarray = np.linspace(0, 1, u_in.shape[1])
-    y: np.ndarray = np.linspace(0, 1, u_in.shape[0])
-    interp: RegularGridInterpolator = RegularGridInterpolator((y, x), u_in)
+    x: np.ndarray = np.linspace(0, 1, img.shape[1])
+    y: np.ndarray = np.linspace(0, 1, img.shape[0])
+    interp: RegularGridInterpolator = RegularGridInterpolator((y, x), img)
     xi: np.ndarray = np.linspace(0, 1, dim)
     yi: np.ndarray = np.linspace(0, 1, dim)
     xx, yy = np.meshgrid(xi, yi, indexing="ij")
@@ -649,18 +651,27 @@ def transient_grating_artifact_filter(
     )
     plt.ion()
 
-    # Load 2D spectroscopy image data from matlab file, interpolate to 1024 x 1024
+    # Load 2D spectroscopy measurement data from matlab input file
     matlab_data: dict = loadmat(f"data/{fname}")
-    u_in: np.ndarray = np.rot90(matlab_data["Data"])
-    u: np.ndarray = interpolate_image(u_in=u_in, dim=1024)
-    u_dft: np.ndarray = np.fft.fft2(u)
+    img_in: np.ndarray = np.rot90(matlab_data["Data"])
+    λs_unscaled: np.ndarray = matlab_data["Wavelength"].flatten()
+    ts_unscaled: np.ndarray = matlab_data["Time"].flatten()
+    if len(λs_unscaled) != img_in.shape[1] or len(ts_unscaled) != img_in.shape[0]:
+        raise ValueError(
+            f"Matlab input file '{fname}' array dimensions are inconsistent"
+        )
+
+    # Interpolate image to make 1024x1024 (square, power of 2 dimensions), calculate DFT
+    img: np.ndarray = interpolate_image(img=img_in, dim=1024)
+    img_dft: np.ndarray = np.fft.fft2(img)
+    img_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(img_dft)) + 1e-10)
 
     # Create ImageSpecs class object containing spectroscopy image specifications
     img_specs: ImageSpecs = ImageSpecs(
-        λs_unscaled=matlab_data["Wavelength"].flatten(),
-        ts_unscaled=matlab_data["Time"].flatten(),
-        height=u.shape[0],
-        width=u.shape[1],
+        λs_unscaled=λs_unscaled,
+        ts_unscaled=ts_unscaled,
+        height=img.shape[0],
+        width=img.shape[1],
     )
 
     # Create Artifact class object containing artifact specifications
@@ -671,12 +682,15 @@ def transient_grating_artifact_filter(
         img_specs=img_specs,
     )
 
-    # Extract periodic and smooth component DFTs, calculate images from inverse DFTs
-    p_dft, s_dft = per(u, inverse_dft=False)
-    p_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(p_dft)) + 1e-10)
-    s_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(s_dft)) + 1e-10)
-    p: np.ndarray = np.real(np.fft.ifft2(p_dft))
-    s: np.ndarray = np.real(np.fft.ifft2(s_dft))
+    # Extract periodic and smooth component DFTs from input image,
+    # calculate corresponding component images from the inverse DFTs
+    periodic_dft, smooth_dft = per(img, inverse_dft=False)
+    periodic_dft_mag, smooth_dft_mag = np.log10(
+        np.abs(np.fft.fftshift(periodic_dft)) + 1e-10
+    ), np.log10(np.abs(np.fft.fftshift(smooth_dft)) + 1e-10)
+    periodic, smooth = np.real(np.fft.ifft2(periodic_dft)), np.real(
+        np.fft.ifft2(smooth_dft)
+    )
 
     # Define filter parameters (ellipse long & short axis, cutout width & height)
     (
@@ -685,7 +699,7 @@ def transient_grating_artifact_filter(
         cut_out_width,
         cut_out_height,
     ) = define_filter_parameters(
-        img=p_dft_mag,
+        img=periodic_dft_mag,
         artifact=artifact,
         threshold_ellipse=threshold_ellipse,
         threshold_cutout=threshold_cutout,
@@ -703,28 +717,37 @@ def transient_grating_artifact_filter(
     )
 
     # Filter periodic component in the Fourier domain, reconstruct filtered image
-    pf_dft: np.ndarray = p_dft * np.fft.fftshift(flt.f)
-    pf: np.ndarray = np.real(np.fft.ifft2(pf_dft))
-    uf: np.ndarray = s + pf
+    periodic_filtered_dft: np.ndarray = periodic_dft * np.fft.fftshift(flt.f)
+    periodic_filtered: np.ndarray = np.real(np.fft.ifft2(periodic_filtered_dft))
+    img_filtered: np.ndarray = smooth + periodic_filtered
 
     # Calculate DFT log magnitude images (add small offset so null DC doesn't break log)
-    uf_dft: np.ndarray = np.fft.fft2(uf)
-    u_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(u_dft)) + 1e-10)
-    pf_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(pf_dft)) + 1e-10)
-    uf_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(uf_dft)) + 1e-10)
+    img_filtered_dft: np.ndarray = np.fft.fft2(img_filtered)
+    img_filtered_dft_mag: np.ndarray = np.log10(
+        np.abs(np.fft.fftshift(img_filtered_dft)) + 1e-10
+    )
+    periodic_filtered_dft_mag: np.ndarray = np.log10(
+        np.abs(np.fft.fftshift(periodic_filtered_dft)) + 1e-10
+    )
 
     # Plot the line profile perpendicular to the artifact though it's center (normal)
     fig_normal: Figure = plot_λ0_and_normal_line_profiles(
-        u=u,
-        uf=uf,
+        img=img,
+        img_filtered=img_filtered,
         img_specs=img_specs,
         artifact=artifact,
     )
 
     # Plot the image & DFT pairs (original, periodic, smooth, filtered u, filtered u)
     fig_images_and_dfts: Figure = plot_images_and_dfts(
-        images=[u, p, s, pf, uf],
-        dfts=[u_dft_mag, p_dft_mag, s_dft_mag, pf_dft_mag, uf_dft_mag],
+        images=[img, periodic, smooth, periodic_filtered, img_filtered],
+        dfts=[
+            img_dft_mag,
+            periodic_dft_mag,
+            smooth_dft_mag,
+            periodic_filtered_dft_mag,
+            img_filtered_dft_mag,
+        ],
         titles=[
             "Original image (u = s + u)",
             "Periodic component (u)",
@@ -746,19 +769,19 @@ def transient_grating_artifact_filter(
     savemat(
         f"output/{fname.split('.mat')[0]}_filtering_results.mat",
         {
-            "u": u,
-            "p": p,
-            "s": s,
-            "pf": pf,
-            "uf": uf,
+            "img": img,
+            "periodic": periodic,
+            "smooth": smooth,
+            "img_filtered": img_filtered,
+            "periodic_filtered": periodic_filtered,
             "Wavelength": img_specs.λs,
             "Time": img_specs.ts,
             "f": flt.f,
-            "u_dft": u_dft,
-            "uf_dft": uf_dft,
-            "p_dft": p_dft,
-            "pf_dft": pf_dft,
-            "s_dft": s_dft,
+            "img_dft": img_dft,
+            "img_filtered_dft": img_filtered_dft,
+            "periodic_dft": periodic_dft,
+            "periodic_filtered_dft": periodic_filtered_dft,
+            "smooth_dft": smooth_dft,
             "artifact_coordinates_pixels": [
                 [artifact.x0_pixels, artifact.x1_pixels],
                 [artifact.y0_pixels, artifact.y1_pixels],
@@ -783,7 +806,7 @@ def main():
     """
 
     # Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
-    substrate_type: str = "gold_film"
+    substrate_type: str = "rhodamine"
 
     # Thresholds for filter construction
     threshold_ellipse: float = 0.3
