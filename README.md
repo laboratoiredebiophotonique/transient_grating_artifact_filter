@@ -18,7 +18,7 @@ transient_grating_artifact_filter(...)
 
 Function parameters:
 
-- fname: matlab input file in the *data* subdirectory with *data*, *Wavelength*, and *Time* fields
+- fname: matlab input file in the *data* subdirectory with *Data*, *Wavelength*, and *Time* fields
 
 *Artifact* class object parameters (see class definition for details):
 - λ0: pump central wavelength (nm)
