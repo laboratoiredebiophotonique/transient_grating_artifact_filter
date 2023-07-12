@@ -1,20 +1,17 @@
-Transient gradient artifact filtering in the Fourier domain
+Transient gradient artifact filtering in the Fourier domain from 2D time-resolved spectroscopy map
 
-Separate an image into "smooth" and "periodic" components as per [Moisan, 2010] to
+First separate the input image (time-resolved spectroscopy map) into "smooth" and "periodic" components as per [Moisan, 2010] to
 reduce the effect of the "cross" pattern in the Discrete Fourier transform due to the
 non-periodic nature of the image (see https://github.com/sbrisard/moisan2011), then
 filter the artifact from the periodic component in the Fourier domain using
 an ellipse with a rectangular cutout at the center to preserve the low-frequency content of the
-image data, recombine the filtered periodic component with the smooth component
-to generate the filtered image.
+baseline data, and finally recombine the filtered periodic component with the smooth component
+to generate the filtered map. NB: the moisan2011 python package must be installed explicitly.
 
-The data image data are read from a matlab format file from the *data* subdirectory,
+The data are read from a matlab format file from the *data* subdirectory,
 the results are written to the *output* subdirectory.
 
-NB: the moisan2011 package must be installed explicitly
-
-Calling the script:
-transient_grating_artifact_filter(...)
+Calling the script: *transient_grating_artifact_filter(fname, λ0_pump, artifact_extent_λ, artifact_extent_t, threshold_ellipse, threshold_cutout, filter_fill_ellipse)*
 
 Function parameters:
 
@@ -31,6 +28,9 @@ Function parameters:
 *Filter* class object parameters (see class definition for details):
 - *threshold_ellipse*: threshold for filter ellipse identification ([0..1])
 - *threshold_cutout*: threshold for filter central rectangular cutout identification ([0..1])
+
+Optional parameters:
+- *filter_fill_ellipse*: if False, draw the outline of the filter ellipse only for debugging purposes (default = True)
 
 Output:
 - Files written to the *output* subdirectory

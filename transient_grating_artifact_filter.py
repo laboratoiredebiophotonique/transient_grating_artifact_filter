@@ -1,13 +1,15 @@
 """transient_grating_artifact_filter.py
 
-Separate an image into smooth and periodic components as per [Moisan, 2010] to reduce
-the effect of the "cross" pattern in the Discrete Fourier transform due to the
-non-periodic nature of the image (see https://github.com/sbrisard/moisan2011), then
-filter the coherent artifact from the periodic component in the Fourier domain using
-an ellipse with its center removed to preserve the low-frequency content of the
-image data.
+Transient gradient artifact filtering in the Fourier domain from 2D time-resolved
+spectroscopy map
 
-NB: the moisan2011 package must be installed explicitly
+First separate the input image (time-resolved spectroscopy map) into "smooth" and
+"periodic" components as per [Moisan, 2010] to reduce the effect of the "cross" pattern
+in the Discrete Fourier transform due to the non-periodic nature of the image
+(see https://github.com/sbrisard/moisan2011), then filter the artifact from the periodic
+component in the Fourier domain using an ellipse with a rectangular cutout at the center
+to preserve the low-frequency content of the baseline data, and finally recombine
+the filtered periodic component with the smooth component o generate the filtered map.
 
 """
 
@@ -27,7 +29,7 @@ import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "1.6"
+__version__: str = "1.7"
 
 
 @dataclass
