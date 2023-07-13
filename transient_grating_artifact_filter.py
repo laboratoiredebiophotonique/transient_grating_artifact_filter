@@ -25,11 +25,10 @@ from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator
 from scipy.io import loadmat, savemat
 from skimage.draw import line
-import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "1.8"
+__version__: str = "1.9"
 
 
 @dataclass
@@ -631,12 +630,15 @@ def transient_grating_artifact_filter(
     threshold_ellipse: float,
     threshold_cutout: float,
     filter_fill_ellipse: bool = True,
-):
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
 
     Separate an image into smooth and periodic components as per [Moisan, 2010], filter
     the periodic component in the Fourier domain to remove the coherent artifact, then
     sum with the smooth component to generate the final result.
+
+    The input Matlab format image file is assumed to be in the ./data subdirectory.
+    The output image files are written to the ./output subdirectory.
 
     Args:
         fname (str): Matlab format input image filename in the ./data subdirectory
@@ -647,7 +649,11 @@ def transient_grating_artifact_filter(
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
         filter_fill_ellipse (bool): see Filter Class docstring (default = True)
 
-    Returns: None
+    Returns: periodic image component (np.ndarray)
+             smooth image component (np.ndarray)
+             filtered image (np.ndarray)
+             filtered periodic component (np.ndarray)
+             binary filter image (np.ndarray)
 
     """
 
@@ -811,70 +817,5 @@ def transient_grating_artifact_filter(
         },
     )
 
-
-def main():
-    """
-    Main function for running the script.
-
-    Returns: None
-
-    """
-
-    # Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
-    substrate_type: str = "nano_pillars"
-
-    # Thresholds for filter construction
-    threshold_ellipse: float = 0.3
-    threshold_cutout: float = 0.5
-
-    # Filter design & debugging: if False, draw ellipse outline only
-    filter_fill_ellipse: bool = True
-
-    # Define simulation parameters for the selected structure
-    if substrate_type == "gold_film":
-        # Smooth unstructured gold film
-        fname: str = "Figure_article_Parallel.mat"
-        λ0_pump: float = 600.0
-        artifact_extent_λ: float = 26
-        artifact_extent_t: float = 0.35
-
-    elif substrate_type == "nano_pillars":
-        # Nano-pillars
-        fname = "Data_ROD_600_long.mat"
-        λ0_pump = 600.0
-        artifact_extent_λ = 25
-        artifact_extent_t = 0.47
-
-    elif substrate_type == "rhodamine":
-        # Rhodamine solution
-        fname = "Data_Rhodamine_570_2.mat"
-        λ0_pump = 570.0
-        artifact_extent_λ = 20
-        artifact_extent_t = 0.55
-
-    else:
-        raise ValueError("Unknown substrate type!")
-
-    # Run the simulation
-    transient_grating_artifact_filter(
-        fname=fname,
-        λ0_pump=λ0_pump,
-        artifact_extent_λ=artifact_extent_λ,
-        artifact_extent_t=artifact_extent_t,
-        threshold_ellipse=threshold_ellipse,
-        threshold_cutout=threshold_cutout,
-        filter_fill_ellipse=filter_fill_ellipse,
-    )
-
-    # If running from the command line, pause for user input to keep figures visible.
-    # If running in PyCharm debugger, set breakpoint below eto keep figures visible
-    if sys.gettrace() is not None:
-        print("Breakpoint here to keep figures visible in IDE!")
-    else:
-        input("Script paused to display figures, press any key to exit...")
-
-    return None
-
-
-if __name__ == "__main__":
-    main()
+    # Return results
+    return periodic, smooth, img_filtered, periodic_filtered, flt.f

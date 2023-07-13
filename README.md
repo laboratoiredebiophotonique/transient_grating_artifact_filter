@@ -8,14 +8,14 @@ an ellipse with a rectangular cutout at the center to preserve the low-frequency
 baseline data, and finally recombine the filtered periodic component with the smooth component
 to generate the filtered map. NB: the moisan2011 python package must be installed explicitly.
 
-The data are read from a matlab format file from the *data* subdirectory,
-the results are written to the *output* subdirectory.
-
 Calling the script: *transient_grating_artifact_filter(fname, λ0_pump, artifact_extent_λ, artifact_extent_t, threshold_ellipse, threshold_cutout, filter_fill_ellipse)*
+
+The data are read from a Matlab format file from the *data* subdirectory,
+the results are written to the *output* subdirectory.
 
 Function parameters:
 
-- *fname*: matlab input file in the *data* subdirectory containing the following arrays:
+- *fname*: Matlab input file in the *data* subdirectory containing the following arrays:
   - *Data*: *nλ* x *nt* spectroscopy measurements (arbitrary units)
   - *Wavelength*: *nλ* wavelength samples (nm)
   - *Time*: *nt* time samples (ps)
@@ -38,3 +38,5 @@ Output:
 Debugging:
 - The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to reach the optimal compromise between removing the artifact and preserving the underlying baseline spectroscopy data.
 - In the first figure, the script draws a cross-hair pattern over the elliptical mask identified by thresholding. The *extent_t* and *extent_λ* input parameters can be fine-tuned to line up the cross-hair with the ellipse axes.
+
+Testing the script: call *transient_grating_artifact_filter_exec.py*
