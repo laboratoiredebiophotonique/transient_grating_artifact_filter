@@ -7,7 +7,7 @@ First separate the input image (time-resolved spectroscopy map) into "smooth" an
 "periodic" components as per [Moisan, 2010] to reduce the effect of the "cross" pattern
 in the Discrete Fourier transform due to the non-periodic nature of the image
 (see https://github.com/sbrisard/moisan2011), then filter the artifact from the periodic
-component in the Fourier domain using an ellipse with a rectangular cutout at the center
+component in the Fourier domain using an ellipse with a cutout at the center
 to preserve the low-frequency content of the baseline data, and finally recombine
 the filtered periodic component with the smooth component o generate the filtered map.
 
@@ -28,7 +28,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "1.999"
+__version__: str = "2.0"
 
 
 @dataclass
@@ -138,27 +138,33 @@ class Artifact:
 @dataclass
 class Filter:
     """
-    Filter parameters (ellipse, with rectangular exclusion zone at the origin)
+    Filter parameters
 
-    cutout_size_horizontal (int): width of rectangle cutout from the ellipse (pixels)
-    cutout_size_vertical (int): height of rectangle cutout from the ellipse (pixels)
-    ellipse_long_axis_length (int): long axis of the ellipse filter (pixels)
-    ellipse_short_axis_length (int): short axis of the ellipse filter (pixels)
+    img_dft_mag (np.ndarray): DFT magnitude image used to define the filter
+    threshold_ellipse (float): threshold for defining the ellipse
+    threshold_cutout (float): threshold for defining the cutout
     img_specs (ImageSpecs): image specifications
     artifact (Artifact): artifact specifications
     fill_ellipse (bool): fill ellipse (False for outline only for debugging, default is True)
 
     """
 
-    cutout_size_horizontal: int
-    cutout_size_vertical: int
-    ellipse_long_axis_length: int
-    ellipse_short_axis_length: int
+    img_dft_mag: np.ndarray
+    threshold_ellipse: float
+    threshold_cutout: float
     img_specs: ImageSpecs
     artifact: Artifact
     fill_ellipse: bool = True
 
     def __post_init__(self):
+        (
+            self.ellipse_long_axis_length,
+            self.ellipse_short_axis_length,
+        ) = define_filter_ellipse(
+            img=self.img_dft_mag,
+            artifact=self.artifact,
+            threshold_ellipse=self.threshold_ellipse,
+        )
         self.f: np.ndarray = self.build_filter()
 
     def build_filter(self) -> np.ndarray:
@@ -169,14 +175,12 @@ class Filter:
 
         """
 
-        # Blank binary filter image (all ones)
-        filter_image: np.ndarray = np.ones(
+        # Draw ellipse
+        ellipse_image_binary: np.ndarray = np.ones(
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
-
-        # Draw ellipse
         cv.ellipse(
-            filter_image,
+            ellipse_image_binary,
             (self.img_specs.width // 2, self.img_specs.height // 2),
             (self.ellipse_long_axis_length, self.ellipse_short_axis_length),
             -self.artifact.angle,
@@ -186,21 +190,22 @@ class Filter:
             -1 if self.fill_ellipse else 1,
         )
 
-        # Draw rectangle cutout at the center of the ellipse
-        filter_image[
-            filter_image.shape[0] // 2
-            - self.cutout_size_vertical // 2 : filter_image.shape[0] // 2
-            + self.cutout_size_vertical // 2,
-            filter_image.shape[1] // 2
-            - self.cutout_size_horizontal // 2 : filter_image.shape[1] // 2
-            + self.cutout_size_horizontal // 2,
-        ] = 1
+        # Remove cutout at the center of ellipse (pixela around origin above threshold)
+        cutout_image: np.ndarray = binarize_image(
+            img=self.img_dft_mag, threshold=self.threshold_cutout
+        )
+        filter_image: np.ndarray = ellipse_image_binary.astype(np.float64) + cutout_image
+
+        # Display filter image
+        fig, ax = plt.subplots()
+        ax.imshow(filter_image, cmap="gray")
+        ax.set_title("Filter binary image")
 
         # Return filter, either filled (with Gaussian blur) or outlined only (debug)
         return (
-            cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0).astype(np.float64)
+            cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0)
             if self.fill_ellipse
-            else filter_image.astype(np.float64)
+            else filter_image
         )
 
 
@@ -295,9 +300,9 @@ def plot_λ0_and_normal_line_profiles(
     return fig
 
 
-def plot_artifact_outline(ax: Axes, img_specs: ImageSpecs, artifact: Artifact):
+def plot_artifact_centerline(ax: Axes, img_specs: ImageSpecs, artifact: Artifact):
     """
-    Plot the outline of the artifact.
+    Plot the centerline of the artifact.
 
     Args:
         ax (Axes): Axes object to plot on
@@ -367,8 +372,7 @@ def plot_images_and_dfts(
     plt.suptitle(
         f"Transient gradient artifact filtering with smooth & periodic component "
         f"decomposition ([Moisan, 2010]) for image in '{fname}'\n"
-        "Filtering parameters : cutout dims (w/h) = "
-        "{flt.cutout_size_horizontal}/{flt.cutout_size_vertical} pixels, "
+        "Filtering parameters : "
         f"ellipse long axis length = {flt.ellipse_long_axis_length} pixels, "
         f"ellipse short axis length = {flt.ellipse_short_axis_length} pixels\n"
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
@@ -392,7 +396,7 @@ def plot_images_and_dfts(
         top_ax.set(title=f"{title}", xlabel="λ (nm)")
         if top_ax == top_axes[0]:
             top_ax.set(ylabel="δt (ps)")
-            plot_artifact_outline(ax=top_ax, img_specs=img_specs, artifact=artifact)
+            plot_artifact_centerline(ax=top_ax, img_specs=img_specs, artifact=artifact)
 
         # Add colorbar to the right of the last image
         if top_ax == top_axes[-1]:
@@ -494,46 +498,24 @@ def calc_line_length(
     return line_length, line_pixel_coordinates
 
 
-def define_filter_parameters(
+def define_filter_ellipse(
     img: np.ndarray,
     artifact: Artifact,
     threshold_ellipse: float,
-    threshold_cutout: float,
-) -> Tuple[int, int, int, int]:
+) -> Tuple[int, int]:
     """
 
-    Determine filter parameters from periodic component DFT magnitude
-    (ellipse long & short axis, rectangular cutout width & height)
+    Determine filter ellipse parameters from periodic component DFT magnitude
 
     Args:
         img: image used to calculate filter parameters (magnitude of the periodic
              component DFT)
         artifact: Artifact class object
         threshold_ellipse: threshold value for identifying filter ellipse ([0, 1]
-        threshold_cutout: threshold value for identifying filter cutout ([0, 1]
 
-    Returns: ellipse_long_axis_length (int), ellipse_short_axis_length (int),
-             cut_out_width (int), cut_out_height (int)
+    Returns: ellipse_long_axis_length (int), ellipse_short_axis_length (int)
 
     """
-
-    # Determine cutout height & width (width/height of pixel rectangle around the origin
-    # above threshold in binary image)
-    img_binary_cutout: np.ndarray = binarize_image(img=img, threshold=threshold_cutout)
-    horizontal_axis_pixels_above_threshold_coordinates = np.where(
-        img_binary_cutout[img_binary_cutout.shape[0] // 2, :] == 1
-    )
-    vertical_axis_pixels_above_threshold_coordinates = np.where(
-        img_binary_cutout[:, img_binary_cutout.shape[1] // 2] == 1
-    )
-    min_x, max_x = min(horizontal_axis_pixels_above_threshold_coordinates[0]), max(
-        horizontal_axis_pixels_above_threshold_coordinates[0]
-    )
-    min_y, max_y = min(vertical_axis_pixels_above_threshold_coordinates[0]), max(
-        vertical_axis_pixels_above_threshold_coordinates[0]
-    )
-    cut_out_width: int = max_x - min_x
-    cut_out_height: int = max_y - min_y
 
     # Determine ellipse long & short axis lengths (lengths of line along the artifact
     # diagonal and normal to the diagonal)
@@ -563,32 +545,9 @@ def define_filter_parameters(
         diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
     )
 
-    # Draw the cutout and ellipse binary images for visual validation and tweaking
-    fig, ax = plt.subplots(1, 2)
-    ax[0].set(
-        title=f"Cutout (threshold = {threshold_cutout:.2f}, "
-        f"width = {cut_out_width} pixels, height = {cut_out_height} pixels)"
-    )
-    img_binary_cutout_rgb = np.repeat(img_binary_cutout[:, :, np.newaxis], 3, axis=2)
-    img_binary_cutout_rgb[y0, :, :] = [1, 0, 0]
-    img_binary_cutout_rgb[:, x0, :] = [1, 0, 0]
-    ax[0].imshow(img_binary_cutout_rgb, cmap="gray")
-    ax[1].set(
-        title=f"Ellipse (threshold = {threshold_ellipse:.2f}, "
-        f"long axis = {ellipse_long_axis_length} pixels, "
-        f"short axis = {ellipse_short_axis_length} pixels)"
-    )
-    img_binary_ellipse_rgb = np.repeat(img_binary_ellipse[:, :, np.newaxis], 3, axis=2)
-    img_binary_ellipse_rgb[artifact_long_diagonal_pixel_coordinates] = [1, 0, 0]
-    img_binary_ellipse_rgb[artifact_short_diagonal_pixel_coordinates] = [1, 0, 0]
-    ax[1].imshow(img_binary_ellipse_rgb, cmap="gray")
-    plt.suptitle("Binary images for filter component determination")
-
     return (
         ellipse_long_axis_length,
         ellipse_short_axis_length,
-        cut_out_width,
-        cut_out_height,
     )
 
 
@@ -651,10 +610,6 @@ def transient_grating_artifact_filter(
             f"Matlab input file '{fname}' array dimensions are inconsistent"
         )
 
-    # Calculate input image DFT
-    img_dft: np.ndarray = np.fft.fft2(img)
-    img_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(img_dft)) + 1e-10)
-
     # Create ImageSpecs class object containing spectroscopy image specifications
     img_specs: ImageSpecs = ImageSpecs(
         λs_unscaled=λs_unscaled,
@@ -671,8 +626,8 @@ def transient_grating_artifact_filter(
         img_specs=img_specs,
     )
 
-    # Extract periodic and smooth component DFTs from input image,
-    # calculate corresponding component images from the inverse DFTs
+    # Extract periodic and smooth component DFTs from input image, calculate
+    # corresponding component images from the inverse DFTs
     periodic_dft, smooth_dft = per(img, inverse_dft=False)
     periodic_dft_mag, smooth_dft_mag = np.log10(
         np.abs(np.fft.fftshift(periodic_dft)) + 1e-10
@@ -681,25 +636,12 @@ def transient_grating_artifact_filter(
         np.fft.ifft2(smooth_dft)
     )
 
-    # Define filter parameters (ellipse long & short axis, cutout width & height)
-    (
-        filter_ellipse_long_axis_length,
-        filter_ellipse_short_axis_length,
-        cut_out_width,
-        cut_out_height,
-    ) = define_filter_parameters(
-        img=periodic_dft_mag,
-        artifact=artifact,
+    # Design ellipse-shaped filter with cutout at center
+    img_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(np.fft.fft2(img))) + 1e-10)
+    flt: Filter = Filter(
+        img_dft_mag=periodic_dft_mag,
         threshold_ellipse=threshold_ellipse,
         threshold_cutout=threshold_cutout,
-    )
-
-    # Design ellipse-shaped filter with rectangular cutout at center
-    flt: Filter = Filter(
-        ellipse_long_axis_length=filter_ellipse_long_axis_length,
-        ellipse_short_axis_length=filter_ellipse_short_axis_length,
-        cutout_size_horizontal=cut_out_width,
-        cutout_size_vertical=cut_out_height,
         fill_ellipse=filter_fill_ellipse,
         img_specs=img_specs,
         artifact=artifact,
@@ -719,7 +661,7 @@ def transient_grating_artifact_filter(
         np.abs(np.fft.fftshift(periodic_filtered_dft)) + 1e-10
     )
 
-    # Plot the line profile perpendicular to the artifact though it's center (normal)
+    # Plot line profile at λ0 and perpendicular to artifact though it's center (normal)
     fig_normal: Figure = plot_λ0_and_normal_line_profiles(
         img=img,
         img_filtered=img_filtered,
@@ -762,8 +704,8 @@ def transient_grating_artifact_filter(
             "img": img,
             "periodic": periodic,
             "smooth": smooth,
-            "img_filtered": img_filtered,
             "periodic_filtered": periodic_filtered,
+            "img_filtered": img_filtered,
             "Wavelengths": img_specs.λs,
             "Time": img_specs.ts,
             "filter_2D": flt.f,
@@ -772,8 +714,6 @@ def transient_grating_artifact_filter(
             "artifact_extent_time_ps": artifact.extent_t,
             "threshold_ellipse": threshold_ellipse,
             "threshold_cutout": threshold_cutout,
-            "filter_cutout_size_horizontal_pixels": flt.cutout_size_horizontal,
-            "filter_cutout_size_vertical_pixels": flt.cutout_size_vertical,
             "filter_ellipse_long_axis_length_pixels": flt.ellipse_long_axis_length,
             "filter_ellipse_shirt_axis_length_pixels": flt.ellipse_short_axis_length,
         },

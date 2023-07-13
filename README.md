@@ -4,7 +4,7 @@ First separate the input image (time-resolved spectroscopy map) into "smooth" an
 reduce the effect of the "cross" pattern in the Discrete Fourier transform due to the
 non-periodic nature of the image (see https://github.com/sbrisard/moisan2011), then
 filter the artifact from the periodic component in the Fourier domain using
-an ellipse with a rectangular cutout at the center to preserve the low-frequency content of the
+an ellipse with a cutout at the center to preserve the low-frequency content of the
 baseline data, and finally recombine the filtered periodic component with the smooth component
 to generate the filtered map. NB: the moisan2011 python package must be installed explicitly.
 
@@ -27,7 +27,7 @@ Function parameters:
 
 *Filter* class object parameters (see class definition for details):
 - *threshold_ellipse*: threshold for filter ellipse identification ([0..1])
-- *threshold_cutout*: threshold for filter central rectangular cutout identification ([0..1])
+- *threshold_cutout*: threshold for filter central cutout identification ([0..1])
 
 Optional parameters:
 - *filter_fill_ellipse*: if False, draw the outline of the filter ellipse only for debugging purposes (default = True)
