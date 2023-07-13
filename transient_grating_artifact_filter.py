@@ -21,6 +21,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from moisan2011 import per
+from pathlib import Path
 from scipy import ndimage
 from scipy.interpolate import RegularGridInterpolator
 from scipy.io import loadmat, savemat
@@ -28,7 +29,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "1.9"
+__version__: str = "1.99"
 
 
 @dataclass
@@ -671,7 +672,8 @@ def transient_grating_artifact_filter(
     plt.ion()
 
     # Load 2D spectroscopy measurement data from matlab input file
-    matlab_data: dict = loadmat(f"data/{fname}")
+    fname_path: Path = Path(f"{fname}")
+    matlab_data: dict = loadmat(str(Path("data") / fname_path))
     img_in: np.ndarray = np.rot90(matlab_data["Data"])
     λs_unscaled: np.ndarray = matlab_data["Wavelength"].flatten()
     ts_unscaled: np.ndarray = matlab_data["Time"].flatten()
@@ -784,11 +786,11 @@ def transient_grating_artifact_filter(
 
     # Save results to the ./output subdirectory
     fig_images_and_dfts.savefig(
-        f"./output/{fname.split('.mat')[0]}_images_and_dfts.png"
+        Path("output") / f"{fname_path.stem}_images_and_dfts.png"
     )
-    fig_normal.savefig(f"./output/{fname.split('.mat')[0]}_normal.png")
+    fig_normal.savefig(Path("output") / f"{fname_path.stem}_normal.png")
     savemat(
-        f"output/{fname.split('.mat')[0]}_filtering_results.mat",
+        str(Path("output") / f"{fname_path.stem}_filtering_results.mat"),
         {
             "img": img,
             "periodic": periodic,
