@@ -29,7 +29,7 @@ import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "1.7"
+__version__: str = "1.8"
 
 
 @dataclass
@@ -774,6 +774,7 @@ def transient_grating_artifact_filter(
         flt=flt,
         fname=fname,
     )
+    plt.show()
 
     # Save results to the ./output subdirectory
     fig_images_and_dfts.savefig(
@@ -820,7 +821,7 @@ def main():
     """
 
     # Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
-    substrate_type: str = "rhodamine"
+    substrate_type: str = "nano_pillars"
 
     # Thresholds for filter construction
     threshold_ellipse: float = 0.3
