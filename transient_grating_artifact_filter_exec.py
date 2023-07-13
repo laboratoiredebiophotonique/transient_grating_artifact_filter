@@ -45,8 +45,8 @@ else:
 # Run the simulation
 transient_grating_artifact_filter(
     fname=fname,
-    λ0_pump=λ0_pump,
-    artifact_extent_λ=artifact_extent_λ,
+    lambda0_pump=λ0_pump,
+    artifact_extent_lambda=artifact_extent_λ,
     artifact_extent_t=artifact_extent_t,
     threshold_ellipse=threshold_ellipse,
     threshold_cutout=threshold_cutout,

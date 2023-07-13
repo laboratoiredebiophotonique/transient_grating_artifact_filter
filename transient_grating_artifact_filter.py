@@ -624,8 +624,8 @@ def define_filter_parameters(
 
 def transient_grating_artifact_filter(
     fname: str,
-    λ0_pump: float,
-    artifact_extent_λ: float,
+    lambda0_pump: float,
+    artifact_extent_lambda: float,
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
@@ -642,8 +642,8 @@ def transient_grating_artifact_filter(
 
     Args:
         fname (str): Matlab format input image filename in the ./data subdirectory
-        λ0_pump (float): Pump central wavelength (nm)
-        artifact_extent_λ (float): Artifact extent in the λ direction (nm)
+        lambda0_pump (float): Pump central wavelength (nm)
+        artifact_extent_lambda (float): Artifact extent in the λ direction (nm)
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
@@ -696,8 +696,8 @@ def transient_grating_artifact_filter(
 
     # Create Artifact class object containing artifact specifications
     artifact: Artifact = Artifact(
-        λ0=λ0_pump,
-        extent_λ=artifact_extent_λ,
+        λ0=lambda0_pump,
+        extent_λ=artifact_extent_lambda,
         extent_t=artifact_extent_t,
         img_specs=img_specs,
     )
@@ -807,7 +807,7 @@ def transient_grating_artifact_filter(
                 [artifact.x0_pixels, artifact.x1_pixels],
                 [artifact.y0_pixels, artifact.y1_pixels],
             ],
-            "lambda0_pump_nm": λ0_pump,
+            "lambda0_pump_nm": lambda0_pump,
             "artifact_extent_wavelength_nm": artifact.extent_λ,
             "artifact_extent_time_ps": artifact.extent_t,
             "filter_cutout_size_horizontal_pixels": flt.cutout_size_horizontal,
