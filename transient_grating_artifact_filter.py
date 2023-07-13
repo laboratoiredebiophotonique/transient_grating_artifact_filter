@@ -23,13 +23,12 @@ from matplotlib.figure import Figure
 from moisan2011 import per
 from pathlib import Path
 from scipy import ndimage
-from scipy.interpolate import RegularGridInterpolator
 from scipy.io import loadmat, savemat
 from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "1.99"
+__version__: str = "1.999"
 
 
 @dataclass
@@ -87,7 +86,12 @@ class Artifact:
         self.extent_λ_pixels: float = self.extent_λ / self.img_specs.dλ
         self.extent_t_pixels: float = self.extent_t / self.img_specs.dt
         self.angle: float = 90 - (
-            np.degrees(np.arctan(self.extent_t_pixels / self.extent_λ_pixels))
+            np.degrees(
+                np.arctan(
+                    (self.extent_t_pixels * self.img_specs.width)
+                    / (self.extent_λ_pixels * self.img_specs.height)
+                )
+            )
         )
 
         # Equation and coordinate endpoints of line though center of the artifact
@@ -101,7 +105,9 @@ class Artifact:
         # Equation and coordinate endpoints of normal through center of the artifact
         self.normal_y0_pixels: int = self.y0_pixels
         self.normal_y1_pixels: int = self.y1_pixels
-        normal_slope: float = -1 / slope
+        normal_slope: float = (
+            -1 / slope * (self.img_specs.height / self.img_specs.width)
+        )
         normal_intercept: float = self.t0_pixels - normal_slope * self.λ0_pixels
         self.normal_x0_pixels: int = int(
             (self.normal_y0_pixels - normal_intercept) / normal_slope
@@ -182,28 +188,13 @@ class Filter:
 
         # Draw rectangle cutout at the center of the ellipse
         filter_image[
-            filter_image.shape[1] // 2
-            - self.cutout_size_vertical // 2 : filter_image.shape[1] // 2
-            + self.cutout_size_vertical // 2,
             filter_image.shape[0] // 2
-            - self.cutout_size_horizontal // 2 : filter_image.shape[0] // 2
+            - self.cutout_size_vertical // 2 : filter_image.shape[0] // 2
+            + self.cutout_size_vertical // 2,
+            filter_image.shape[1] // 2
+            - self.cutout_size_horizontal // 2 : filter_image.shape[1] // 2
             + self.cutout_size_horizontal // 2,
         ] = 1
-        """
-        # Draw cross cutout at the center of the ellipse
-        filter_image[
-            filter_image.shape[1] // 2
-            - self.cutout_size_vertical // 2 : filter_image.shape[1] // 2
-            + self.cutout_size_vertical // 2,
-            :,
-        ] = 1
-        filter_image[
-            :,
-            filter_image.shape[0] // 2
-            - self.cutout_size_horizontal // 2 : filter_image.shape[0] // 2
-            + self.cutout_size_horizontal // 2,
-        ] = 1
-        """
 
         # Return filter, either filled (with Gaussian blur) or outlined only (debug)
         return (
@@ -438,28 +429,6 @@ def plot_images_and_dfts(
     return fig
 
 
-def interpolate_image(img: np.ndarray, dim: int) -> np.ndarray:
-    """
-    Interpolate image to dim x dim
-
-    Args:
-        img (np.ndarray): original input image
-        dim (int): output image dimension in both axes
-
-    Returns: interpolated image
-
-    """
-
-    x: np.ndarray = np.linspace(0, 1, img.shape[1])
-    y: np.ndarray = np.linspace(0, 1, img.shape[0])
-    interp: RegularGridInterpolator = RegularGridInterpolator((y, x), img)
-    xi: np.ndarray = np.linspace(0, 1, dim)
-    yi: np.ndarray = np.linspace(0, 1, dim)
-    xx, yy = np.meshgrid(xi, yi, indexing="ij")
-
-    return interp((xx, yy))
-
-
 def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
     """
     Binarize image using a threshold
@@ -674,17 +643,15 @@ def transient_grating_artifact_filter(
     # Load 2D spectroscopy measurement data from matlab input file
     fname_path: Path = Path(f"{fname}")
     matlab_data: dict = loadmat(str(Path("data") / fname_path))
-    img_in: np.ndarray = np.rot90(matlab_data["Data"])
+    img: np.ndarray = np.rot90(matlab_data["Data"])
     λs_unscaled: np.ndarray = matlab_data["Wavelength"].flatten()
     ts_unscaled: np.ndarray = matlab_data["Time"].flatten()
-    if len(λs_unscaled) != img_in.shape[1] or len(ts_unscaled) != img_in.shape[0]:
+    if len(λs_unscaled) != img.shape[1] or len(ts_unscaled) != img.shape[0]:
         raise ValueError(
             f"Matlab input file '{fname}' array dimensions are inconsistent"
         )
 
-    # Interpolate image to make it square to the next power of 2, calculate DFT
-    dim_power_of_2: int = int(2 ** np.ceil(np.log10(max(img_in.shape)) / np.log10(2)))
-    img: np.ndarray = interpolate_image(img=img_in, dim=dim_power_of_2)
+    # Calculate input image DFT
     img_dft: np.ndarray = np.fft.fft2(img)
     img_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(img_dft)) + 1e-10)
 
@@ -800,18 +767,11 @@ def transient_grating_artifact_filter(
             "Wavelengths": img_specs.λs,
             "Time": img_specs.ts,
             "filter_2D": flt.f,
-            "img_dft": img_dft,
-            "img_filtered_dft": img_filtered_dft,
-            "periodic_dft": periodic_dft,
-            "periodic_filtered_dft": periodic_filtered_dft,
-            "smooth_dft": smooth_dft,
-            "artifact_coordinates_pixels": [
-                [artifact.x0_pixels, artifact.x1_pixels],
-                [artifact.y0_pixels, artifact.y1_pixels],
-            ],
             "lambda0_pump_nm": lambda0_pump,
             "artifact_extent_wavelength_nm": artifact.extent_λ,
             "artifact_extent_time_ps": artifact.extent_t,
+            "threshold_ellipse": threshold_ellipse,
+            "threshold_cutout": threshold_cutout,
             "filter_cutout_size_horizontal_pixels": flt.cutout_size_horizontal,
             "filter_cutout_size_vertical_pixels": flt.cutout_size_vertical,
             "filter_ellipse_long_axis_length_pixels": flt.ellipse_long_axis_length,
