@@ -10,12 +10,12 @@ to generate the filtered map. NB: the moisan2011 python package must be installe
 
 Calling the script: *transient_grating_artifact_filter(fname, λ0_pump, artifact_extent_λ, artifact_extent_t, threshold_ellipse, threshold_cutout, filter_fill_ellipse)*
 
-The data are read from a Matlab format file from the *data* subdirectory,
+The data are read from a Matlab, Excel, or .csv format file from the *data* subdirectory,
 the results are written to the *output* subdirectory.
 
 Function parameters:
 
-- *fname*: Matlab input file in the *data* subdirectory containing the following arrays:
+- *fname*: input file in the *data* subdirectory containing the following arrays:
   - *Data*: *nλ* x *nt* spectroscopy measurements (arbitrary units)
   - *Wavelength*: *nλ* wavelength samples (nm)
   - *Time*: *nt* time samples (ps)

@@ -3,3 +3,6 @@ numpy
 opencv-python
 scikit-image
 scipy
+pandas
+moisan2011
+pathlib

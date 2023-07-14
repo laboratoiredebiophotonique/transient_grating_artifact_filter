@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import cv2 as cv
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from moisan2011 import per
@@ -28,7 +29,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.0"
+__version__: str = "2.2"
 
 
 @dataclass
@@ -143,6 +144,7 @@ class Filter:
     img_dft_mag (np.ndarray): DFT magnitude image used to define the filter
     threshold_ellipse (float): threshold for defining the ellipse
     threshold_cutout (float): threshold for defining the cutout
+    padding (float): extra padding for the filter ellipse ([0..1])
     img_specs (ImageSpecs): image specifications
     artifact (Artifact): artifact specifications
     fill_ellipse (bool): fill ellipse (False for outline only for debugging, default is True)
@@ -154,18 +156,160 @@ class Filter:
     threshold_cutout: float
     img_specs: ImageSpecs
     artifact: Artifact
+    padding: float = 0.20
     fill_ellipse: bool = True
 
     def __post_init__(self):
         (
             self.ellipse_long_axis_length,
             self.ellipse_short_axis_length,
-        ) = define_filter_ellipse(
-            img=self.img_dft_mag,
-            artifact=self.artifact,
-            threshold_ellipse=self.threshold_ellipse,
-        )
+        ) = self.define_filter_ellipse()
         self.f: np.ndarray = self.build_filter()
+
+    @staticmethod
+    def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
+        """
+        Binarize image using a threshold
+
+        Args:
+            img (np.ndarray): image to be converted to binary
+            threshold (float): threshold [0, 1]
+
+        Returns: binary image (np.ndarray)
+
+        """
+
+        # Normalize image to [0, 1], limit to 4 decades of dynamic range, else small pixel
+        # values will skew the normalization since values are on a log scale.
+        img[img < np.amax(img) - 4] = np.amax(img) - 4
+        img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
+
+        # Binarize image with threshold, clean up with morphological opening and closing
+        img_binary: np.ndarray = cv.threshold(
+            img_normalized, threshold, 1, cv.THRESH_BINARY
+        )[1]
+        img_binary_open: np.ndarray = cv.morphologyEx(
+            img_binary, cv.MORPH_OPEN, np.ones((3, 3), np.uint8)
+        )
+        img_binary_final: np.ndarray = cv.morphologyEx(
+            img_binary_open, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8)
+        )
+
+        return img_binary_final
+
+    @staticmethod
+    def calc_line_length(
+        img_binary: np.ndarray, diagonal_pixel_coordinates: np.ndarray
+    ) -> float:
+        """
+        Calculate the length of a line in a binary image along a diagonal
+
+        Args:
+            img_binary (np.ndarray): binary image to be analyzed
+            diagonal_pixel_coordinates (np.ndarray): array of pixel coordinates along diagonal
+
+        Returns: line length (float)
+
+        """
+
+        diagonal_pixel_values: np.ndarray = np.asarray(
+            img_binary[diagonal_pixel_coordinates]
+        )
+        line_pixel_coordinate_indices: np.ndarray = np.asarray(
+            np.where(diagonal_pixel_values == 1)
+        ).flatten()
+        if len(line_pixel_coordinate_indices) > 0:
+            line_pixel_coordinates: np.ndarray = np.asarray(
+                [
+                    diagonal_pixel_coordinates[0][line_pixel_coordinate_indices],
+                    diagonal_pixel_coordinates[1][line_pixel_coordinate_indices],
+                ]
+            )
+            return float(
+                np.linalg.norm(
+                    np.array(line_pixel_coordinates.T[-1] - line_pixel_coordinates.T[0])
+                )
+            )
+        else:
+            return 0.0
+
+    def define_filter_ellipse(self) -> Tuple[int, int]:
+        """
+
+        Determine filter ellipse parameters from periodic component DFT magnitude
+
+        Returns: ellipse_long_axis_length (int), ellipse_short_axis_length (int)
+
+        """
+
+        # Determine ellipse long & short axis lengths (lengths of line along the artifact
+        # diagonal and normal to the diagonal)
+        img_binary_ellipse: np.ndarray = self.binarize_image(
+            img=self.img_dft_mag, threshold=self.threshold_ellipse
+        )
+        x0, y0 = self.img_dft_mag.shape[1] // 2, self.img_dft_mag.shape[0] // 2
+        l: float = min(self.img_dft_mag.shape) / 2.5
+        artifact_long_diagonal_pixel_coordinates: np.ndarray = line(
+            r0=int(y0 - l * np.sin(np.radians(self.artifact.angle))),
+            c0=int(x0 + l * np.cos(np.radians(self.artifact.angle))),
+            r1=int(y0 + l * np.sin(np.radians(self.artifact.angle))),
+            c1=int(x0 - l * np.cos(np.radians(self.artifact.angle))),
+        )
+        artifact_short_diagonal_pixel_coordinates: np.ndarray = line(
+            r0=int(y0 - l * np.sin(np.radians(self.artifact.angle + 90))),
+            c0=int(x0 + l * np.cos(np.radians(self.artifact.angle + 90))),
+            r1=int(y0 + l * np.sin(np.radians(self.artifact.angle + 90))),
+            c1=int(x0 - l * np.cos(np.radians(self.artifact.angle + 90))),
+        )
+        ellipse_long_axis_length: int = int(
+            self.calc_line_length(
+                img_binary=img_binary_ellipse,
+                diagonal_pixel_coordinates=artifact_long_diagonal_pixel_coordinates,
+            )
+            * (1.0 + self.padding)
+        )
+        ellipse_short_axis_length: int = int(
+            self.calc_line_length(
+                img_binary=img_binary_ellipse,
+                diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
+            )
+            * (1.0 + self.padding)
+        )
+        if ellipse_long_axis_length == 0 or ellipse_short_axis_length == 0:
+            raise ValueError(
+                f"Threshold value for ellipse ({self.threshold_ellipse}) is too high!"
+            )
+
+        # Draw ellipse above-threshold pixels and resulting shape, for validation
+        fig, ax = plt.subplots()
+        ax.set(
+            title="Filter ellipse binary image: threshold = "
+            f"{self.threshold_ellipse:.2f}, "
+            f"long axis = {ellipse_long_axis_length} pixels, "
+            f"short axis = {ellipse_short_axis_length} pixels"
+            f" ({self.padding * 100:.0f}% padding)"
+        )
+        img_binary_ellipse_rgb = np.repeat(
+            img_binary_ellipse[:, :, np.newaxis], 3, axis=2
+        )
+        img_binary_ellipse_rgb[artifact_long_diagonal_pixel_coordinates] = [1, 0, 0]
+        img_binary_ellipse_rgb[artifact_short_diagonal_pixel_coordinates] = [1, 0, 0]
+        cv.ellipse(
+            img_binary_ellipse_rgb,
+            (self.img_specs.width // 2, self.img_specs.height // 2),
+            (ellipse_long_axis_length // 2, ellipse_short_axis_length // 2),
+            -self.artifact.angle,
+            0,
+            360,
+            (1, 0, 0),
+            1,
+        )
+        ax.imshow(img_binary_ellipse_rgb, cmap="gray")
+
+        return (
+            ellipse_long_axis_length,
+            ellipse_short_axis_length,
+        )
 
     def build_filter(self) -> np.ndarray:
         """
@@ -182,7 +326,7 @@ class Filter:
         cv.ellipse(
             ellipse_image_binary,
             (self.img_specs.width // 2, self.img_specs.height // 2),
-            (self.ellipse_long_axis_length, self.ellipse_short_axis_length),
+            (self.ellipse_long_axis_length // 2, self.ellipse_short_axis_length // 2),
             -self.artifact.angle,
             0,
             360,
@@ -191,15 +335,16 @@ class Filter:
         )
 
         # Remove cutout at the center of ellipse (pixela around origin above threshold)
-        cutout_image: np.ndarray = binarize_image(
+        cutout_image: np.ndarray = self.binarize_image(
             img=self.img_dft_mag, threshold=self.threshold_cutout
         )
-        filter_image: np.ndarray = ellipse_image_binary.astype(np.float64) + cutout_image
-
-        # Display filter image
-        fig, ax = plt.subplots()
-        ax.imshow(filter_image, cmap="gray")
-        ax.set_title("Filter binary image")
+        if np.count_nonzero(cutout_image > 0) == 0:
+            raise ValueError(
+                f"Threshold value for cutout ({self.threshold_cutout}) is too high!"
+            )
+        filter_image: np.ndarray = (
+            ellipse_image_binary.astype(np.float64) + cutout_image
+        )
 
         # Return filter, either filled (with Gaussian blur) or outlined only (debug)
         return (
@@ -433,122 +578,16 @@ def plot_images_and_dfts(
     return fig
 
 
-def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
-    """
-    Binarize image using a threshold
-
-    Args:
-        img (np.ndarray): image to be converted to binary
-        threshold (float): threshold [0, 1]
-
-    Returns: binary image (np.ndarray)
-
-    """
-
-    # Normalize image to [0, 1], limit to 4 decades of dynamic range, else small pixel
-    # values will skew the normalization since values are on a log scale.
-    img[img < np.amax(img) - 4] = np.amax(img) - 4
-    img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
-
-    # Binarize image with threshold, clean up with morphological opening and closing
-    img_binary: np.ndarray = cv.threshold(
-        img_normalized, threshold, 1, cv.THRESH_BINARY
-    )[1]
-    img_binary_open: np.ndarray = cv.morphologyEx(
-        img_binary, cv.MORPH_OPEN, np.ones((3, 3), np.uint8)
-    )
-    img_binary_final: np.ndarray = cv.morphologyEx(
-        img_binary_open, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8)
-    )
-
-    return img_binary_final
-
-
-def calc_line_length(
-    img_binary: np.ndarray, diagonal_pixel_coordinates: np.ndarray
-) -> Tuple[int, np.ndarray]:
-    """
-    Calculate the length of a line in a binary image along a diagonal
-
-    Args:
-        img_binary (np.ndarray): binary image to be analyzed
-        diagonal_pixel_coordinates (np.ndarray): array of pixel coordinates along diagonal
-
-    Returns: line length (int), line pixel coordinates (np.ndarray)
-
-    """
-
-    diagonal_pixel_values: np.ndarray = np.asarray(
-        img_binary[diagonal_pixel_coordinates]
-    )
-    line_pixel_coordinate_indices: np.ndarray = np.asarray(
-        np.where(diagonal_pixel_values == 1)
-    ).flatten()
-    line_pixel_coordinates: np.ndarray = np.asarray(
-        [
-            diagonal_pixel_coordinates[0][line_pixel_coordinate_indices],
-            diagonal_pixel_coordinates[1][line_pixel_coordinate_indices],
-        ]
-    )
-    line_length: int = int(
-        np.linalg.norm(
-            np.array(line_pixel_coordinates.T[-1] - line_pixel_coordinates.T[0])
-        )
-    )
-    return line_length, line_pixel_coordinates
-
-
-def define_filter_ellipse(
-    img: np.ndarray,
-    artifact: Artifact,
-    threshold_ellipse: float,
-) -> Tuple[int, int]:
-    """
-
-    Determine filter ellipse parameters from periodic component DFT magnitude
-
-    Args:
-        img: image used to calculate filter parameters (magnitude of the periodic
-             component DFT)
-        artifact: Artifact class object
-        threshold_ellipse: threshold value for identifying filter ellipse ([0, 1]
-
-    Returns: ellipse_long_axis_length (int), ellipse_short_axis_length (int)
-
-    """
-
-    # Determine ellipse long & short axis lengths (lengths of line along the artifact
-    # diagonal and normal to the diagonal)
-    img_binary_ellipse: np.ndarray = binarize_image(
-        img=img, threshold=threshold_ellipse
-    )
-    x0, y0 = img.shape[1] // 2, img.shape[0] // 2
-    l: float = img.shape[0] / 4
-    artifact_long_diagonal_pixel_coordinates: np.ndarray = line(
-        r0=int(y0 - l * np.sin(np.radians(artifact.angle))),
-        c0=int(x0 + l * np.cos(np.radians(artifact.angle))),
-        r1=int(y0 + l * np.sin(np.radians(artifact.angle))),
-        c1=int(x0 - l * np.cos(np.radians(artifact.angle))),
-    )
-    artifact_short_diagonal_pixel_coordinates: np.ndarray = line(
-        r0=int(y0 - l * np.sin(np.radians(artifact.angle + 90))),
-        c0=int(x0 + l * np.cos(np.radians(artifact.angle + 90))),
-        r1=int(y0 + l * np.sin(np.radians(artifact.angle + 90))),
-        c1=int(x0 - l * np.cos(np.radians(artifact.angle + 90))),
-    )
-    ellipse_long_axis_length, _ = calc_line_length(
-        img_binary=img_binary_ellipse,
-        diagonal_pixel_coordinates=artifact_long_diagonal_pixel_coordinates,
-    )
-    ellipse_short_axis_length, _ = calc_line_length(
-        img_binary=img_binary_ellipse,
-        diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
-    )
-
-    return (
-        ellipse_long_axis_length,
-        ellipse_short_axis_length,
-    )
+def write_excel_sheet(
+    sheet_array: np.ndarray,
+    array_data: np.ndarray,
+    array_name: str,
+    df: pd.DataFrame,
+    writer: pd.ExcelWriter,
+):
+    sheet_array[1:, 1:] = array_data
+    df_local = pd.DataFrame(sheet_array, index=df.index, columns=df.columns)
+    df_local.to_excel(writer, sheet_name=array_name, index=False, header=False)
 
 
 def transient_grating_artifact_filter(
@@ -566,11 +605,11 @@ def transient_grating_artifact_filter(
     the periodic component in the Fourier domain to remove the coherent artifact, then
     sum with the smooth component to generate the final result.
 
-    The input Matlab format image file is assumed to be in the ./data subdirectory.
+    The input file is assumed to be in the ./data subdirectory.
     The output image files are written to the ./output subdirectory.
 
     Args:
-        fname (str): Matlab format input image filename in the ./data subdirectory
+        fname (str): input filename in the ./data subdirectory (Matlab, Excel, or .csv)
         lambda0_pump (float): Pump central wavelength (nm)
         artifact_extent_lambda (float): Artifact extent in the λ direction (nm)
         artifact_extent_t (float): Artifact extent in the t direction (ps)
@@ -599,15 +638,28 @@ def transient_grating_artifact_filter(
     )
     plt.ion()
 
-    # Load 2D spectroscopy measurement data from matlab input file
+    # Load 2D spectroscopy measurement data from input file (Matlab, Excel, or .csv)
     fname_path: Path = Path(f"{fname}")
-    matlab_data: dict = loadmat(str(Path("data") / fname_path))
-    img: np.ndarray = np.rot90(matlab_data["Data"])
-    λs_unscaled: np.ndarray = matlab_data["Wavelength"].flatten()
-    ts_unscaled: np.ndarray = matlab_data["Time"].flatten()
+    img: np.ndarray
+    λs_unscaled: np.ndarray
+    ts_unscaled: np.ndarray
+    df: pd.DataFrame = pd.DataFrame()
+    if fname_path.suffix == ".mat":
+        matlab_data: dict = loadmat(str(Path("data") / fname_path))
+        img: np.ndarray = matlab_data["Data"]
+        λs_unscaled = matlab_data["Wavelength"].flatten()
+        ts_unscaled = matlab_data["Time"].flatten()
+    elif fname_path.suffix in [".csv", ".xlsx", ".xls"]:
+        df = pd.read_excel(str(Path("data") / fname_path), header=None)
+        img: np.ndarray = df.iloc[1:, 1:].to_numpy()
+        λs_unscaled = df.iloc[0, 1:].to_numpy()
+        ts_unscaled = df.iloc[1:, 0].to_numpy()
+    else:
+        raise ValueError(f"Input file '{fname}' is not a Matlab, Excel, or .csv file!")
     if len(λs_unscaled) != img.shape[1] or len(ts_unscaled) != img.shape[0]:
         raise ValueError(
-            f"Matlab input file '{fname}' array dimensions are inconsistent"
+            f"Input file '{fname}' array dimensions are inconsistent"
+            " (mismatch between Data vs Wavelength and/or Time array dimensions)!"
         )
 
     # Create ImageSpecs class object containing spectroscopy image specifications
@@ -637,7 +689,9 @@ def transient_grating_artifact_filter(
     )
 
     # Design ellipse-shaped filter with cutout at center
-    img_dft_mag: np.ndarray = np.log10(np.abs(np.fft.fftshift(np.fft.fft2(img))) + 1e-10)
+    img_dft_mag: np.ndarray = np.log10(
+        np.abs(np.fft.fftshift(np.fft.fft2(img))) + 1e-10
+    )
     flt: Filter = Filter(
         img_dft_mag=periodic_dft_mag,
         threshold_ellipse=threshold_ellipse,
@@ -698,26 +752,90 @@ def transient_grating_artifact_filter(
         Path("output") / f"{fname_path.stem}_images_and_dfts.png"
     )
     fig_normal.savefig(Path("output") / f"{fname_path.stem}_normal.png")
-    savemat(
-        str(Path("output") / f"{fname_path.stem}_filtering_results.mat"),
-        {
-            "img": img,
-            "periodic": periodic,
-            "smooth": smooth,
-            "periodic_filtered": periodic_filtered,
-            "img_filtered": img_filtered,
-            "Wavelengths": img_specs.λs,
-            "Time": img_specs.ts,
-            "filter_2D": flt.f,
-            "lambda0_pump_nm": lambda0_pump,
-            "artifact_extent_wavelength_nm": artifact.extent_λ,
-            "artifact_extent_time_ps": artifact.extent_t,
-            "threshold_ellipse": threshold_ellipse,
-            "threshold_cutout": threshold_cutout,
-            "filter_ellipse_long_axis_length_pixels": flt.ellipse_long_axis_length,
-            "filter_ellipse_shirt_axis_length_pixels": flt.ellipse_short_axis_length,
-        },
-    )
+    if fname_path.suffix == ".mat":
+        savemat(
+            str(Path("output") / f"{fname_path.stem}_filtering_results.mat"),
+            {
+                "Data": img,
+                "periodic": periodic,
+                "smooth": smooth,
+                "periodic_filtered": periodic_filtered,
+                "Data_filtered": img_filtered,
+                "Wavelength": img_specs.λs,
+                "Time": img_specs.ts,
+                "filter_2D": flt.f,
+                "lambda0_pump_nm": lambda0_pump,
+                "artifact_extent_wavelength_nm": artifact.extent_λ,
+                "artifact_extent_time_ps": artifact.extent_t,
+                "threshold_ellipse": threshold_ellipse,
+                "threshold_cutout": threshold_cutout,
+                "filter_ellipse_long_axis_length_pixels": flt.ellipse_long_axis_length,
+                "filter_ellipse_shirt_axis_length_pixels": flt.ellipse_short_axis_length,
+            },
+        )
+    else:
+        with pd.ExcelWriter(
+            Path("output") / f"{fname_path.stem}_filtering_results.xlsx"
+        ) as writer:
+            sheet_array: np.ndarray = df.iloc[:, :].to_numpy()
+            write_excel_sheet(
+                sheet_array=sheet_array,
+                array_data=img,
+                array_name="Data",
+                df=df,
+                writer=writer,
+            )
+            write_excel_sheet(
+                sheet_array=sheet_array,
+                array_data=periodic,
+                array_name="Periodic",
+                df=df,
+                writer=writer,
+            )
+            write_excel_sheet(
+                sheet_array=sheet_array,
+                array_data=smooth,
+                array_name="Smooth",
+                df=df,
+                writer=writer,
+            )
+            write_excel_sheet(
+                sheet_array=sheet_array,
+                array_data=periodic_filtered,
+                array_name="periodic_filtered",
+                df=df,
+                writer=writer,
+            )
+            write_excel_sheet(
+                sheet_array=sheet_array,
+                array_data=img_filtered,
+                array_name="Data_filtered",
+                df=df,
+                writer=writer,
+            )
+            write_excel_sheet(
+                sheet_array=sheet_array,
+                array_data=flt.f,
+                array_name="filter_2D",
+                df=df,
+                writer=writer,
+            )
+            df_info = pd.DataFrame(
+                {
+                    "lambda0_pump_nm": [lambda0_pump],
+                    "artifact_extent_wavelength_nm": [artifact.extent_λ],
+                    "artifact_extent_time_ps": [artifact.extent_t],
+                    "threshold_ellipse": [threshold_ellipse],
+                    "threshold_cutout": [threshold_cutout],
+                    "filter_ellipse_long_axis_length_pixels": [
+                        flt.ellipse_long_axis_length
+                    ],
+                    "filter_ellipse_shirt_axis_length_pixels": [
+                        flt.ellipse_short_axis_length
+                    ],
+                }
+            )
+            df_info.to_excel(writer, sheet_name="info", index=False)
 
     # Return results
     return periodic, smooth, img_filtered, periodic_filtered, flt.f

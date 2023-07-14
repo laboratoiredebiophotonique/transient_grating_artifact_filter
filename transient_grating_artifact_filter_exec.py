@@ -7,10 +7,10 @@ from transient_grating_artifact_filter import transient_grating_artifact_filter
 import sys
 
 # Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
-substrate_type: str = "gold_film"
+substrate_type: str = "rhodamine"
 
 # Thresholds for filter construction
-threshold_ellipse: float = 0.3
+threshold_ellipse: float = 0.1
 threshold_cutout: float = 0.5
 
 # Filter design & debugging: if False, draw ellipse outline only
@@ -19,23 +19,23 @@ filter_fill_ellipse: bool = True
 # Define simulation parameters for the selected structure
 if substrate_type == "gold_film":
     # Smooth unstructured gold film
-    fname: str = "Figure_article_Parallel.mat"
+    fname: str = "Figure_article_Parallel.xlsx"
     λ0_pump: float = 600.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
 
 elif substrate_type == "nano_pillars":
     # Nano-pillars
-    fname = "Data_ROD_600_long.mat"
+    fname = "Data_ROD_600_long.xlsx"
     λ0_pump = 600.0
     artifact_extent_λ = 25
     artifact_extent_t = 0.47
 
 elif substrate_type == "rhodamine":
     # Rhodamine solution
-    fname = "Data_Rhodamine_570_2.mat"
+    fname = "Data_Rhodamine_570_2.xlsx"
     λ0_pump = 570.0
-    artifact_extent_λ = 20
+    artifact_extent_λ = 22
     artifact_extent_t = 0.55
 
 else:
