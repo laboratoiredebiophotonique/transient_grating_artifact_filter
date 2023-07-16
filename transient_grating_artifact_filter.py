@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.3"
+__version__: str = "2.4"
 
 
 @dataclass
@@ -173,8 +173,8 @@ class Filter:
 
     def __post_init__(self):
         (
-            self.ellipse_long_axis_length,
-            self.ellipse_short_axis_length,
+            self.ellipse_long_axis_radius,
+            self.ellipse_short_axis_radius,
         ) = self.define_filter_ellipse()
         self.f: np.ndarray = self.build_filter()
 
@@ -250,7 +250,7 @@ class Filter:
 
         Determine filter ellipse parameters from periodic component DFT magnitude
 
-        Returns: ellipse_long_axis_length (int), ellipse_short_axis_length (int)
+        Returns: ellipse_long_axis_radius (int), ellipse_short_axis_radius (int)
 
         """
 
@@ -280,21 +280,27 @@ class Filter:
                 self.img_specs.x0 - l * np.cos(np.radians(self.artifact.angle + 90))
             ),
         )
-        ellipse_long_axis_length: int = int(
-            self.calc_line_length(
-                img_binary=img_binary_ellipse,
-                diagonal_pixel_coordinates=artifact_long_diagonal_pixel_coordinates,
+        ellipse_long_axis_radius: int = int(
+            (
+                self.calc_line_length(
+                    img_binary=img_binary_ellipse,
+                    diagonal_pixel_coordinates=artifact_long_diagonal_pixel_coordinates,
+                )
+                * (1.0 + self.padding)
             )
-            * (1.0 + self.padding)
+            // 2
         )
-        ellipse_short_axis_length: int = int(
-            self.calc_line_length(
-                img_binary=img_binary_ellipse,
-                diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
+        ellipse_short_axis_radius: int = int(
+            (
+                self.calc_line_length(
+                    img_binary=img_binary_ellipse,
+                    diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
+                )
+                * (1.0 + self.padding)
             )
-            * (1.0 + self.padding)
+            // 2
         )
-        if ellipse_long_axis_length == 0 or ellipse_short_axis_length == 0:
+        if ellipse_long_axis_radius == 0 or ellipse_short_axis_radius == 0:
             raise ValueError(
                 f"Threshold value for ellipse ({self.threshold_ellipse}) is too high!"
             )
@@ -304,8 +310,8 @@ class Filter:
         ax.set(
             title="Filter ellipse binary image: threshold = "
             f"{self.threshold_ellipse:.2f}, "
-            f"long axis = {ellipse_long_axis_length} pixels, "
-            f"short axis = {ellipse_short_axis_length} pixels"
+            f"long axis radius = {ellipse_long_axis_radius} pixels, "
+            f"short axis radius = {ellipse_short_axis_radius} pixels"
             f" ({self.padding * 100:.0f}% padding)"
         )
         img_binary_ellipse_rgb = np.repeat(
@@ -316,7 +322,7 @@ class Filter:
         cv.ellipse(
             img_binary_ellipse_rgb,
             (self.img_specs.x0, self.img_specs.y0),
-            (ellipse_long_axis_length // 2, ellipse_short_axis_length // 2),
+            (ellipse_long_axis_radius, ellipse_short_axis_radius),
             -self.artifact.angle,
             0,
             360,
@@ -326,8 +332,8 @@ class Filter:
         ax.imshow(img_binary_ellipse_rgb, cmap="gray")
 
         return (
-            ellipse_long_axis_length,
-            ellipse_short_axis_length,
+            ellipse_long_axis_radius,
+            ellipse_short_axis_radius,
         )
 
     def build_filter(self) -> np.ndarray:
@@ -345,7 +351,7 @@ class Filter:
         cv.ellipse(
             ellipse_image_binary,
             (self.img_specs.x0, self.img_specs.y0),
-            (self.ellipse_long_axis_length // 2, self.ellipse_short_axis_length // 2),
+            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
             -self.artifact.angle,
             0,
             360,
@@ -587,8 +593,8 @@ def plot_images_and_dfts(
         f"Transient gradient artifact filtering with smooth & periodic component "
         f"decomposition ([Moisan, 2010]) for image in '{fname}'\n"
         "Filtering parameters : "
-        f"ellipse long axis length = {flt.ellipse_long_axis_length} pixels, "
-        f"ellipse short axis length = {flt.ellipse_short_axis_length} pixels\n"
+        f"ellipse long axis radius = {flt.ellipse_long_axis_radius} pixels, "
+        f"ellipse short axis radius = {flt.ellipse_short_axis_radius} pixels\n"
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
         f"extent λ = {artifact.extent_λ:.1f} nm, "
         f"extent t = {artifact.extent_t:.2f} ps\n"
@@ -872,8 +878,8 @@ def transient_grating_artifact_filter(
                 "artifact_extent_time_ps": artifact.extent_t,
                 "threshold_ellipse": threshold_ellipse,
                 "threshold_cutout": threshold_cutout,
-                "filter_ellipse_long_axis_length_pixels": flt.ellipse_long_axis_length,
-                "filter_ellipse_shirt_axis_length_pixels": flt.ellipse_short_axis_length,
+                "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
+                "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
             },
         )
     else:
@@ -930,11 +936,11 @@ def transient_grating_artifact_filter(
                     "artifact_extent_time_ps": [artifact.extent_t],
                     "threshold_ellipse": [threshold_ellipse],
                     "threshold_cutout": [threshold_cutout],
-                    "filter_ellipse_long_axis_length_pixels": [
-                        flt.ellipse_long_axis_length
+                    "filter_ellipse_long_axis_radius_pixels": [
+                        flt.ellipse_long_axis_radius
                     ],
-                    "filter_ellipse_shirt_axis_length_pixels": [
-                        flt.ellipse_short_axis_length
+                    "filter_ellipse_short_axis_radius_pixels": [
+                        flt.ellipse_short_axis_radius
                     ],
                 }
             )
