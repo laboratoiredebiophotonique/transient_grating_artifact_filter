@@ -25,11 +25,12 @@ from moisan2011 import per
 from pathlib import Path
 from scipy import ndimage
 from scipy.io import loadmat, savemat
+from scipy.interpolate import RegularGridInterpolator
 from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.2"
+__version__: str = "2.3"
 
 
 @dataclass
@@ -50,6 +51,9 @@ class ImageSpecs:
     width: int
 
     def __post_init__(self):
+        self.x0 = self.width // 2
+        self.y0 = self.height // 2
+
         self.λ0: float = self.λs_unscaled[0]
         self.λ1: float = self.λs_unscaled[-1]
         self.λs: np.ndarray = np.linspace(self.λ0, self.λ1, self.width)
@@ -147,6 +151,12 @@ class Filter:
     padding (float): extra padding for the filter ellipse ([0..1])
     img_specs (ImageSpecs): image specifications
     artifact (Artifact): artifact specifications
+    cross_width (int) = width of cross-shaped band along the horizontal and vertical
+                        axes in the Fourier domain, cutout from the filter to pass
+                        any remaining non-periodic content left over from
+                        the smooth/periodic decomposition (default is 0)
+    gaussian_blur: int = gaussian blur kernel size applied to the fileter to
+                         reduce ringing(default is 0)
     fill_ellipse (bool): fill ellipse (False for outline only for debugging, default is True)
 
     """
@@ -158,6 +168,8 @@ class Filter:
     artifact: Artifact
     padding: float = 0.20
     fill_ellipse: bool = True
+    cross_width: int = 0
+    gaussian_blur: int = 0
 
     def __post_init__(self):
         (
@@ -247,19 +259,26 @@ class Filter:
         img_binary_ellipse: np.ndarray = self.binarize_image(
             img=self.img_dft_mag, threshold=self.threshold_ellipse
         )
-        x0, y0 = self.img_dft_mag.shape[1] // 2, self.img_dft_mag.shape[0] // 2
         l: float = min(self.img_dft_mag.shape) / 2.5
         artifact_long_diagonal_pixel_coordinates: np.ndarray = line(
-            r0=int(y0 - l * np.sin(np.radians(self.artifact.angle))),
-            c0=int(x0 + l * np.cos(np.radians(self.artifact.angle))),
-            r1=int(y0 + l * np.sin(np.radians(self.artifact.angle))),
-            c1=int(x0 - l * np.cos(np.radians(self.artifact.angle))),
+            r0=int(self.img_specs.y0 - l * np.sin(np.radians(self.artifact.angle))),
+            c0=int(self.img_specs.x0 + l * np.cos(np.radians(self.artifact.angle))),
+            r1=int(self.img_specs.y0 + l * np.sin(np.radians(self.artifact.angle))),
+            c1=int(self.img_specs.x0 - l * np.cos(np.radians(self.artifact.angle))),
         )
         artifact_short_diagonal_pixel_coordinates: np.ndarray = line(
-            r0=int(y0 - l * np.sin(np.radians(self.artifact.angle + 90))),
-            c0=int(x0 + l * np.cos(np.radians(self.artifact.angle + 90))),
-            r1=int(y0 + l * np.sin(np.radians(self.artifact.angle + 90))),
-            c1=int(x0 - l * np.cos(np.radians(self.artifact.angle + 90))),
+            r0=int(
+                self.img_specs.y0 - l * np.sin(np.radians(self.artifact.angle + 90))
+            ),
+            c0=int(
+                self.img_specs.x0 + l * np.cos(np.radians(self.artifact.angle + 90))
+            ),
+            r1=int(
+                self.img_specs.y0 + l * np.sin(np.radians(self.artifact.angle + 90))
+            ),
+            c1=int(
+                self.img_specs.x0 - l * np.cos(np.radians(self.artifact.angle + 90))
+            ),
         )
         ellipse_long_axis_length: int = int(
             self.calc_line_length(
@@ -296,7 +315,7 @@ class Filter:
         img_binary_ellipse_rgb[artifact_short_diagonal_pixel_coordinates] = [1, 0, 0]
         cv.ellipse(
             img_binary_ellipse_rgb,
-            (self.img_specs.width // 2, self.img_specs.height // 2),
+            (self.img_specs.x0, self.img_specs.y0),
             (ellipse_long_axis_length // 2, ellipse_short_axis_length // 2),
             -self.artifact.angle,
             0,
@@ -325,16 +344,16 @@ class Filter:
         )
         cv.ellipse(
             ellipse_image_binary,
-            (self.img_specs.width // 2, self.img_specs.height // 2),
+            (self.img_specs.x0, self.img_specs.y0),
             (self.ellipse_long_axis_length // 2, self.ellipse_short_axis_length // 2),
             -self.artifact.angle,
             0,
             360,
-            (0, 0, 0) if self.fill_ellipse else (255, 255, 255),
+            0 if self.fill_ellipse else 1,
             -1 if self.fill_ellipse else 1,
         )
 
-        # Remove cutout at the center of ellipse (pixela around origin above threshold)
+        # Remove cutout from center of ellipse (pixels around origin above threshold)
         cutout_image: np.ndarray = self.binarize_image(
             img=self.img_dft_mag, threshold=self.threshold_cutout
         )
@@ -346,12 +365,62 @@ class Filter:
             ellipse_image_binary.astype(np.float64) + cutout_image
         )
 
-        # Return filter, either filled (with Gaussian blur) or outlined only (debug)
-        return (
-            cv.GaussianBlur(filter_image, (3, 3), sigmaX=0, sigmaY=0)
-            if self.fill_ellipse
-            else filter_image
-        )
+        # Leave bands around horizontal and vertical axes intact, if requested
+        if self.cross_width > 0:
+            filter_image[
+                self.img_specs.y0
+                - self.cross_width // 2 : self.img_specs.y0
+                + self.cross_width // 2
+                + 1,
+                :,
+            ] = 1
+            filter_image[
+                :,
+                self.img_specs.x0
+                - self.cross_width // 2 : self.img_specs.x0
+                + self.cross_width // 2
+                + 1,
+            ] = 1
+            filter_image[filter_image == 2] = 1
+
+        # Gaussian blur to reduce ringing, if requested
+        if self.gaussian_blur > 0 and self.fill_ellipse:
+            filter_image = cv.GaussianBlur(
+                filter_image,
+                (self.gaussian_blur, self.gaussian_blur),
+                sigmaX=0,
+                sigmaY=0,
+            )
+
+        # Show filter in a window
+        fig, ax = plt.subplots()
+        ax.set(title="Filter")
+        ax.imshow(filter_image, cmap="gray")
+
+        # Return filter
+        return filter_image
+
+
+def interpolate_image(u_in: np.ndarray, dim: list) -> np.ndarray:
+    """
+    Interpolate image to dim x dim
+
+    Args:
+        u_in (np.ndarray): original input image
+        dim (int): output image dimension in both axes
+
+    Returns: interpolated image
+
+    """
+
+    x = np.linspace(0, 1, u_in.shape[1])
+    y = np.linspace(0, 1, u_in.shape[0])
+    interp = RegularGridInterpolator((y, x), u_in)
+    xi = np.linspace(0, 1, dim[1])
+    yi = np.linspace(0, 1, dim[0])
+    yy, xx = np.meshgrid(yi, xi, indexing="ij")
+
+    return interp((yy, xx))
 
 
 def plot_λ0_and_normal_line_profiles(
@@ -597,6 +666,8 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
+    cross_width: int = 0,
+    interpolate_image_to_power_of_two: bool = False,
     filter_fill_ellipse: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -615,6 +686,10 @@ def transient_grating_artifact_filter(
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
+        cross_width (int): width of cross cutout in filter (default = 0)
+        interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
+                                                  nearest larger power of two
+                                                  (default = False)
         filter_fill_ellipse (bool): see Filter Class docstring (default = True)
 
     Returns: periodic image component (np.ndarray)
@@ -638,29 +713,47 @@ def transient_grating_artifact_filter(
     )
     plt.ion()
 
+    # Check input parameters
+    if threshold_ellipse > threshold_cutout:
+        raise ValueError(
+            f"threshold_ellipse ({threshold_ellipse})"
+            f"must be less than threshold_cutout ({threshold_cutout})!"
+        )
+
     # Load 2D spectroscopy measurement data from input file (Matlab, Excel, or .csv)
     fname_path: Path = Path(f"{fname}")
-    img: np.ndarray
+    img_in: np.ndarray
     λs_unscaled: np.ndarray
     ts_unscaled: np.ndarray
     df: pd.DataFrame = pd.DataFrame()
     if fname_path.suffix == ".mat":
         matlab_data: dict = loadmat(str(Path("data") / fname_path))
-        img: np.ndarray = matlab_data["Data"]
+        img_in = matlab_data["Data"]
         λs_unscaled = matlab_data["Wavelength"].flatten()
         ts_unscaled = matlab_data["Time"].flatten()
     elif fname_path.suffix in [".csv", ".xlsx", ".xls"]:
         df = pd.read_excel(str(Path("data") / fname_path), header=None)
-        img: np.ndarray = df.iloc[1:, 1:].to_numpy()
+        img_in = df.iloc[1:, 1:].to_numpy()
         λs_unscaled = df.iloc[0, 1:].to_numpy()
         ts_unscaled = df.iloc[1:, 0].to_numpy()
     else:
         raise ValueError(f"Input file '{fname}' is not a Matlab, Excel, or .csv file!")
-    if len(λs_unscaled) != img.shape[1] or len(ts_unscaled) != img.shape[0]:
+    if len(λs_unscaled) != img_in.shape[1] or len(ts_unscaled) != img_in.shape[0]:
         raise ValueError(
             f"Input file '{fname}' array dimensions are inconsistent"
             " (mismatch between Data vs Wavelength and/or Time array dimensions)!"
         )
+
+    # Interpolate image dimensions to nearest larger power of two, if requested
+    img: np.ndarray
+    if interpolate_image_to_power_of_two:
+        dim: list = [
+            int(2 ** np.ceil(np.log2(img_in.shape[0]))),
+            int(2 ** np.ceil(np.log2(img_in.shape[1]))),
+        ]
+        img = interpolate_image(u_in=img_in, dim=dim)
+    else:
+        img = img_in
 
     # Create ImageSpecs class object containing spectroscopy image specifications
     img_specs: ImageSpecs = ImageSpecs(
@@ -699,6 +792,7 @@ def transient_grating_artifact_filter(
         fill_ellipse=filter_fill_ellipse,
         img_specs=img_specs,
         artifact=artifact,
+        cross_width=cross_width,
     )
 
     # Filter periodic component in the Fourier domain, reconstruct filtered image
@@ -725,13 +819,21 @@ def transient_grating_artifact_filter(
 
     # Plot the image & DFT pairs (original, periodic, smooth, filtered u, filtered u)
     fig_images_and_dfts: Figure = plot_images_and_dfts(
-        images=[img, periodic, smooth, periodic_filtered, img_filtered],
+        images=[
+            img,
+            periodic,
+            smooth,
+            periodic_filtered,
+            img_filtered,
+            img - img_filtered,
+        ],
         dfts=[
             img_dft_mag,
             periodic_dft_mag,
             smooth_dft_mag,
             periodic_filtered_dft_mag,
             img_filtered_dft_mag,
+            img_dft_mag - img_filtered_dft_mag,
         ],
         titles=[
             "Original image (u = s + u)",
@@ -739,6 +841,7 @@ def transient_grating_artifact_filter(
             "Smooth component (s)",
             "Filtered periodic component (uf)",
             "Filtered image (uf = s + uf)",
+            "Artifact (u - uf)",
         ],
         img_specs=img_specs,
         artifact=artifact,
