@@ -39,7 +39,7 @@ Optional parameters (filter fine tuning):
   - *pass_upper_left_lower_right_quadrants* (bool): Pass (do not filter) upper left 
                     and lower right quadrants of Fourier space (default = False).
   - *gaussian_blur* (int) = gaussian blur kernel size applied to the fileter to reduce
-                      ringing(default is 0 pixels),
+                      ringing (default is 0 pixels),
 
 Output:
 - Files written to the *output* subdirectory
