@@ -15,7 +15,7 @@ threshold_cutout: float = 0.5
 
 # Cross width for filter construction
 cross_width: int = 0
-pass_upper_left_lower_right_quadrants: bool = True
+pass_upper_left_lower_right_quadrants: bool = False
 
 # Define simulation parameters for the selected structure
 if substrate_type == "gold_film":
