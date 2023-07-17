@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.7"
+__version__: str = "2.9"
 
 
 @dataclass
@@ -174,14 +174,20 @@ class Filter:
     padding (float): extra padding for the filter ellipse ([0..1])
     img_specs (ImageSpecs): image specifications
     artifact (Artifact): artifact specifications
-    cross_width (int) = width of cross-shaped band along the horizontal and vertical
-                        axes in the Fourier domain, cutout from the filter to pass
-                        any remaining non-periodic content left over from
-                        the smooth/periodic decomposition (default is 0)
-    pass_upper_left_lower_right_quadrants (bool) = pass the upper left and lower right
-                                                   quadrants of filter (default = False)
+    padding (float) = extra padding around thresholded pixels for filter ellipse
+                       ([0..1], disabled if == 0)
+    cross_pass_band_width (int) = width of cross-shaped pass band along horizontal
+                                  and vertical axes in the Fourier domain, cutout from
+                                  the filter to pass any remaining non-periodic
+                                  content left over from the smooth/periodic
+                                  decomposition (disabled if < 0)
+    pass_upper_left_lower_right_quadrants (bool) = pass (do not filter) the upper-left
+                                                   and lower-right quadrants of Fourier
+                                                   space, excluding the horizontal and
+                                                   vertical axes that can be passed with
+                                                   cross_pass_band_width > 0
     gaussian_blur: int = gaussian blur kernel size applied to the fileter to
-                         reduce ringing(default is 0)
+                         reduce ringing (disabled if < 0)
 
     """
 
@@ -190,10 +196,10 @@ class Filter:
     threshold_cutout: float
     img_specs: ImageSpecs
     artifact: Artifact
-    padding: float = 0.20
-    cross_width: int = 0
-    pass_upper_left_lower_right_quadrants: bool = False
-    gaussian_blur: int = 0
+    padding: float
+    cross_pass_band_width: int
+    pass_upper_left_lower_right_quadrants: bool
+    gaussian_blur: int
 
     def __post_init__(self):
         (
@@ -403,20 +409,20 @@ class Filter:
         )
 
         # Pass (do not filter) bands around horizontal and vertical axes, if requested
-        if self.cross_width > 0:
+        if self.cross_pass_band_width > 0:
             filter_image[
-                self.img_specs.y0
-                - self.cross_width // 2 : self.img_specs.y0
-                + self.cross_width // 2
-                + 1,
+            self.img_specs.y0
+            - self.cross_pass_band_width // 2: self.img_specs.y0
+                                               + self.cross_pass_band_width // 2
+                                               + 1,
                 :,
             ] = 1
             filter_image[
                 :,
-                self.img_specs.x0
-                - self.cross_width // 2 : self.img_specs.x0
-                + self.cross_width // 2
-                + 1,
+            self.img_specs.x0
+            - self.cross_pass_band_width // 2: self.img_specs.x0
+                                               + self.cross_pass_band_width // 2
+                                               + 1,
             ] = 1
             filter_image[filter_image == 2] = 1
 
@@ -504,7 +510,7 @@ def plot_line_profiles(
     axs[0].set(
         xlabel="time (s)",
         ylabel=r"$\Delta$R/R",
-        title=f"Raw and filtered vertical line profiles at λ0 ({artifact.λ0} nm)",
+        title=f"Raw and filtered vertical line profiles at λ0 ({artifact.λ0:.2f} nm)",
         xlim=(img_specs.ts[0], img_specs.ts[-1]),
     )
 
@@ -516,7 +522,8 @@ def plot_line_profiles(
     axs[1].set(
         xlabel="λ (pm)",
         ylabel=r"$\Delta$R/R",
-        title=f"Raw and filtered horizontal line profiles at vertical midpoint ({img_specs.ts[img.shape[0] // 2]} ps)",
+        title=f"Raw and filtered horizontal line profiles at vertical midpoint "
+        f"({img_specs.ts[img.shape[0] // 2]:.2f} ps)",
     )
 
     # Raw and filtered line profiles along the normal to the artifact
@@ -709,7 +716,7 @@ def transient_grating_artifact_filter(
     threshold_ellipse: float,
     threshold_cutout: float,
     padding=0.20,
-    cross_width=0,
+    cross_pass_band_width=0,
     pass_upper_left_lower_right_quadrants=False,
     gaussian_blur=0,
     interpolate_image_to_power_of_two: bool = False,
@@ -730,12 +737,12 @@ def transient_grating_artifact_filter(
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
-        padding (float): padding for filter cutout (default = 0.20, i.e. 20%)
-        cross_width (int): width of cross cutout in filter (default = 0)
+        padding (float): padding for filter ellipse size (default = 0.20, i.e. +20%)
+        cross_pass_band_width (int): width of cross cutout in filter (default = 0)
         pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
                                               quadrants of the filter (default = False)
         gaussian_blur (int): width of Gaussian blur kernel in filter (default = 0,
-                             i.e. no blur
+                             i.e. no blur)
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                                   nearest larger power of two
                                                   (default = False)
@@ -824,7 +831,7 @@ def transient_grating_artifact_filter(
         img_specs=img_specs,
         artifact=artifact,
         padding=padding,
-        cross_width=cross_width,
+        cross_pass_band_width=cross_pass_band_width,
         pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
         gaussian_blur=gaussian_blur,
     )
@@ -907,7 +914,7 @@ def transient_grating_artifact_filter(
                 "threshold_ellipse": threshold_ellipse,
                 "threshold_cutout": threshold_cutout,
                 "padding": flt.padding,
-                "cross_width": flt.cross_width,
+                "cross_pass_band_width": flt.cross_pass_band_width,
                 "gaussian_blur": flt.gaussian_blur,
                 "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
                 "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
@@ -970,7 +977,7 @@ def transient_grating_artifact_filter(
                     "threshold_ellipse": [threshold_ellipse],
                     "threshold_cutout": [threshold_cutout],
                     "padding": [flt.padding],
-                    "cross_width": [flt.cross_width],
+                    "cross_pass_band_width": [flt.cross_pass_band_width],
                     "gaussian_blur": [flt.gaussian_blur],
                     "filter_ellipse_long_axis_radius_pixels": [
                         flt.ellipse_long_axis_radius
