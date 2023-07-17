@@ -38,8 +38,6 @@ Optional parameters (filter fine tuning):
                     smooth/periodic decomposition (default is 0, i.e. no cross cutout).
   - *pass_upper_left_lower_right_quadrants* (bool): Pass (do not filter) upper left 
                     and lower right quadrants of Fourier space (default = False).
-  - *gaussian_blur* (int) = gaussian blur kernel size applied to the filter to reduce
-                      ringing (default is 0 pixels, i.e. no gaussian blur).
 
 Output:
 - Files written to the *output* subdirectory

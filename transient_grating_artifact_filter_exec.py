@@ -7,7 +7,7 @@ from transient_grating_artifact_filter import transient_grating_artifact_filter
 import sys
 
 # Structures to simulate: "croix", "gold_film", "nano_pillars", "rhodamine"
-substrate_type: str = "rhodamine"
+substrate_type: str = "croix"
 
 # Thresholds for filter construction
 threshold_ellipse: float = 0.1

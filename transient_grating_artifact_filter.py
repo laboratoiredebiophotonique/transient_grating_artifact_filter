@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.91"
+__version__: str = "2.92"
 
 
 @dataclass
@@ -185,8 +185,6 @@ class Filter:
                                                    space, excluding the horizontal and
                                                    vertical axes that can be passed with
                                                    cross_pass_band_width > 0
-    gaussian_blur: int = gaussian blur kernel size applied to the fileter to
-                         reduce ringing (disabled if < 0)
 
     """
 
@@ -198,7 +196,6 @@ class Filter:
     ellipse_padding: float
     cross_pass_band_width: int
     pass_upper_left_lower_right_quadrants: bool
-    gaussian_blur: int
 
     def __post_init__(self):
         (
@@ -434,15 +431,6 @@ class Filter:
                 self.img_specs.height // 2 + 1 :, self.img_specs.width // 2 + 1 :
             ] = 1
             filter_image[filter_image == 2] = 1
-
-        # Gaussian blur the filter shape to reduce ringing, if requested
-        if self.gaussian_blur > 0:
-            filter_image = cv.GaussianBlur(
-                filter_image,
-                (self.gaussian_blur, self.gaussian_blur),
-                sigmaX=0,
-                sigmaY=0,
-            )
 
         # Show images of thresholded pixels and filter
         fig, axs = plt.subplots(3)
@@ -808,7 +796,6 @@ def write_output_excel_file(
                 "threshold_cutout": [flt.threshold_cutout],
                 "ellipse_padding": [flt.ellipse_padding],
                 "cross_pass_band_width": [flt.cross_pass_band_width],
-                "gaussian_blur": [flt.gaussian_blur],
                 "filter_ellipse_long_axis_radius_pixels": [
                     flt.ellipse_long_axis_radius
                 ],
@@ -870,11 +857,24 @@ def write_output_matlab_file(
             "threshold_cutout": flt.threshold_cutout,
             "ellipse_padding": flt.ellipse_padding,
             "cross_pass_band_width": flt.cross_pass_band_width,
-            "gaussian_blur": flt.gaussian_blur,
             "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
             "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
         },
     )
+
+
+def calc_dft_log_magnitude(img) -> np.ndarray:
+    """
+    Calculate DFT log magnitude image (add small offset so null DC doesn't break log)
+
+    Args:
+        img (np.ndarray): input image
+
+    Returns (np.ndarray): DFT log magnitude image
+
+    """
+
+    return np.log10(np.abs(np.fft.fftshift(np.fft.fft2(img))) + 1e-10)
 
 
 def transient_grating_artifact_filter(
@@ -887,7 +887,6 @@ def transient_grating_artifact_filter(
     ellipse_padding=0.20,
     cross_pass_band_width=0,
     pass_upper_left_lower_right_quadrants=False,
-    gaussian_blur=0,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -911,8 +910,6 @@ def transient_grating_artifact_filter(
         cross_pass_band_width (int): width of cross cutout in filter (default = 0)
         pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
                                               quadrants of the filter (default = False)
-        gaussian_blur (int): width of Gaussian blur kernel applied to filter
-                             (default = 0, i.e. no blur)
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                                   nearest larger power of two
                                                   (default = False)
@@ -1000,7 +997,6 @@ def transient_grating_artifact_filter(
         ellipse_padding=ellipse_padding,
         cross_pass_band_width=cross_pass_band_width,
         pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
-        gaussian_blur=gaussian_blur,
     )
 
     # Filter the artifact from the periodic component, reconstruct the filtered image
@@ -1011,21 +1007,14 @@ def transient_grating_artifact_filter(
     # Light 3x3 Gaussian filtering of the output image to remove high frequency noise
     img_filtered_final: np.ndarray = ndimage.gaussian_filter(img_filtered, 3)
 
-    # Calculate DFT log magnitude images (add small offset so null DC doesn't break log)
-    img_dft_mag: np.ndarray = np.log10(
-        np.abs(np.fft.fftshift(np.fft.fft2(img_specs.img))) + 1e-10
-    )
-    periodic_filtered_dft_mag: np.ndarray = np.log10(
-        np.abs(np.fft.fftshift(periodic_filtered_dft)) + 1e-10
-    )
-    img_filtered_dft_mag: np.ndarray = np.log10(
-        np.abs(np.fft.fftshift(np.fft.fft2(img_filtered))) + 1e-10
-    )
-    img_filtered_final_dft_mag: np.ndarray = np.log10(
-        np.abs(np.fft.fftshift(np.fft.fft2(img_filtered_final))) + 1e-10
-    )
+    # Calculate various required DFT log magnitude images
+    img_dft_mag: np.ndarray = calc_dft_log_magnitude(img_specs.img)
+    periodic_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(periodic_filtered)
+    img_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered)
+    img_filtered_final_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered_final)
 
-    # Plot line profile at λ0 and perpendicular to artifact though it's center (normal)
+    # Plot line profile vertically at λ0, horizontally at vertical (time) mid-point,
+    # and perpendicular to the artifact though it's center (normal),
     fig_normal: Figure = plot_line_profiles(
         img=img_specs.img,
         img_filtered=img_filtered_final,
