@@ -30,8 +30,8 @@ Function parameters:
 - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
 
 Optional parameters (filter fine tuning):
-  - *padding* (float): extra padding for the filter ellipse relative the thresholded area 
-               ([0..1], default is 0.2, i.e. +20%),
+  - *ellipse_padding* (float): extra padding for the filter ellipse relative the
+                               thresholded area  ([0..1], default is 0.2, i.e. +20%)
   - *cross_pass_band_width* (int) = width of a cross-shaped pass-band cutout along the
                     horizontal and vertical axes of the filter ellipse to pass
                     (i.e. not filter) any remaining non-periodic content left over from the

@@ -171,11 +171,10 @@ class Filter:
     img_dft_mag (np.ndarray): DFT magnitude image used to define the filter
     threshold_ellipse (float): threshold for defining the ellipse
     threshold_cutout (float): threshold for defining the cutout
-    padding (float): extra padding for the filter ellipse ([0..1])
     img_specs (ImageSpecs): image specifications
     artifact (Artifact): artifact specifications
-    padding (float) = extra padding around thresholded pixels for filter ellipse
-                       ([0..1], disabled if == 0)
+    ellipse_padding (float) = extra padding around thresholded pixels for filter ellipse
+                             ([0..1], disabled if == 0)
     cross_pass_band_width (int) = width of cross-shaped pass band along horizontal
                                   and vertical axes in the Fourier domain, cutout from
                                   the filter to pass any remaining non-periodic
@@ -196,7 +195,7 @@ class Filter:
     threshold_cutout: float
     img_specs: ImageSpecs
     artifact: Artifact
-    padding: float
+    ellipse_padding: float
     cross_pass_band_width: int
     pass_upper_left_lower_right_quadrants: bool
     gaussian_blur: int
@@ -318,7 +317,7 @@ class Filter:
                     img_binary=img_binary_ellipse,
                     diagonal_pixel_coordinates=artifact_long_diagonal_pixel_coordinates,
                 )
-                * (1.0 + self.padding)
+                * (1.0 + self.ellipse_padding)
             )
             // 2
         )
@@ -328,7 +327,7 @@ class Filter:
                     img_binary=img_binary_ellipse,
                     diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
                 )
-                * (1.0 + self.padding)
+                * (1.0 + self.ellipse_padding)
             )
             // 2
         )
@@ -454,7 +453,7 @@ class Filter:
             f"{self.threshold_ellipse:.2f}, "
             f"long axis radius = {self.ellipse_long_axis_radius} pixels, "
             f"short axis radius = {self.ellipse_short_axis_radius} pixels"
-            f" ({self.padding * 100:.0f}% padding)"
+            f" ({self.ellipse_padding * 100:.0f}% ellipse padding)"
         )
         axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
 
@@ -715,7 +714,7 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
-    padding=0.20,
+    ellipse_padding=0.20,
     cross_pass_band_width=0,
     pass_upper_left_lower_right_quadrants=False,
     gaussian_blur=0,
@@ -737,7 +736,8 @@ def transient_grating_artifact_filter(
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
-        padding (float): padding for filter ellipse size (default = 0.20, i.e. +20%)
+        ellipse_padding (float): padding for filter ellipse size
+                                 (default = 0.20, i.e. +20%)
         cross_pass_band_width (int): width of cross cutout in filter (default = 0)
         pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
                                               quadrants of the filter (default = False)
@@ -830,7 +830,7 @@ def transient_grating_artifact_filter(
         threshold_cutout=threshold_cutout,
         img_specs=img_specs,
         artifact=artifact,
-        padding=padding,
+        ellipse_padding=ellipse_padding,
         cross_pass_band_width=cross_pass_band_width,
         pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
         gaussian_blur=gaussian_blur,
@@ -913,7 +913,7 @@ def transient_grating_artifact_filter(
                 "artifact_extent_time_ps": artifact.extent_t,
                 "threshold_ellipse": threshold_ellipse,
                 "threshold_cutout": threshold_cutout,
-                "padding": flt.padding,
+                "ellipse_padding": flt.ellipse_padding,
                 "cross_pass_band_width": flt.cross_pass_band_width,
                 "gaussian_blur": flt.gaussian_blur,
                 "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
@@ -976,7 +976,7 @@ def transient_grating_artifact_filter(
                     "artifact_extent_time_ps": [artifact.extent_t],
                     "threshold_ellipse": [threshold_ellipse],
                     "threshold_cutout": [threshold_cutout],
-                    "padding": [flt.padding],
+                    "ellipse_padding": [flt.ellipse_padding],
                     "cross_pass_band_width": [flt.cross_pass_band_width],
                     "gaussian_blur": [flt.gaussian_blur],
                     "filter_ellipse_long_axis_radius_pixels": [
