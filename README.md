@@ -15,28 +15,30 @@ the results are written to the *output* subdirectory.
 
 Function parameters:
 
-- *fname*: input file in the *data* subdirectory containing the following arrays:
+- *fname* (str): input file in the *data* subdirectory containing the following arrays:
   - *Data*: *nλ* x *nt* spectroscopy measurements (arbitrary units)
   - *Wavelength*: *nλ* wavelength samples (nm)
   - *Time*: *nt* time samples (ps)
 
 *Artifact* class object parameters (see class definition for details):
-- *λ0*: pump central wavelength (nm)
-- *extent_t*: artifact extent in time (ps)
-- *extent_λ*: artifact extent in wavelength (nm)
+- *λ0* (float): pump central wavelength (nm)
+- *extent_t* (float): artifact extent in time (ps)
+- *extent_λ* (float): artifact extent in wavelength (nm)
 
 *Filter* class object parameters (see class definition for details):
-- *threshold_ellipse*: threshold for filter ellipse identification ([0..1])
-- *threshold_cutout*: threshold for filter central cutout identification ([0..1])
+- *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
+- *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
 
 Optional parameters (filter fine tuning):
-  - *padding*: extra padding for the filter ellipse relative the thresholded area 
+  - *padding* (float): extra padding for the filter ellipse relative the thresholded area 
                ([0..1], default is 0.2, i.e. +20%),
-  - *cross_width* = width of a cross-shaped band cutout along the horizontal and
-                    vertical axes in the Fourier domain from the filter to pass
+  - *cross_width* (int) = width of a cross-shaped band cutout along the horizontal and
+                    vertical axes in the Fourier domain from the filter to pass (not filter)
                     any remaining non-periodic content left over from the
                     smooth/periodic decomposition (default is 0, i.e. no cross cutout),
-  - *gaussian_blur* = gaussian blur kernel size applied to the fileter to reduce
+  - *pass_upper_left_lower_right_quadrants* (bool): Pass (do not filter) upper left 
+                    and lower right quadrants of Fourier space (default = False)
+  - *gaussian_blur* (int) = gaussian blur kernel size applied to the fileter to reduce
                       ringing(default is 0 pixels),
 
 Output:
