@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.9"
+__version__: str = "2.91"
 
 
 @dataclass
@@ -823,8 +823,8 @@ def transient_grating_artifact_filter(
         cross_pass_band_width (int): width of cross cutout in filter (default = 0)
         pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
                                               quadrants of the filter (default = False)
-        gaussian_blur (int): width of Gaussian blur kernel in filter (default = 0,
-                             i.e. no blur)
+        gaussian_blur (int): width of Gaussian blur kernel applied to filter
+                             (default = 0, i.e. no blur)
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                                   nearest larger power of two
                                                   (default = False)
