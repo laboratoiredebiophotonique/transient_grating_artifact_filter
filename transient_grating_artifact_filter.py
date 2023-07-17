@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.5"
+__version__: str = "2.6"
 
 
 @dataclass
@@ -38,31 +38,54 @@ class ImageSpecs:
     """
     Spectroscopy image specifications
 
-    λs_unscaled (np.ndarray): unscaled array of wavelengths (nm)
-    ts_unscaled (np.ndarray): unscaled array of times (ps)
+    λs_in (np.ndarray): input array of wavelengths (nm)
+    ts_in (np.ndarray): input array of times (ps)
     height (int): scaled image height (pixels)
     width (int): scaled image width (pixels
 
     """
 
-    λs_unscaled: np.ndarray
-    ts_unscaled: np.ndarray
-    height: int
-    width: int
+    λs_in: np.ndarray
+    ts_in: np.ndarray
+    img_in: np.ndarray
+    interpolate_image_to_power_of_two: bool = False
 
     def __post_init__(self):
+        # Check that input wavelength and time arrays match input image dimensions
+        if (
+            len(self.λs_in) != self.img_in.shape[1]
+            or len(self.ts_in) != self.img_in.shape[0]
+        ):
+            raise ValueError(
+                "Input file array dimensions are inconsistent "
+                "(mismatch between Data vs Wavelength and/or Time array dimensions)!"
+            )
+
+        # Interpolate image dimensions to nearest larger power of two, if requested
+        if self.interpolate_image_to_power_of_two:
+            self.height, self.width = int(
+                2 ** np.ceil(np.log2(self.img_in.shape[0]))
+            ), int(2 ** np.ceil(np.log2(self.img_in.shape[1])))
+        else:
+            self.height, self.width = self.img_in.shape
+
+        # Image dimensions center pixel coordinates
         self.x0 = self.width // 2
         self.y0 = self.height // 2
 
-        self.λ0: float = self.λs_unscaled[0]
-        self.λ1: float = self.λs_unscaled[-1]
+        # Resample the input arrays on a regular even-spaced grid to account for any
+        # non-uniform time or frequency sampling
+        self.λ0: float = self.λs_in[0]
+        self.λ1: float = self.λs_in[-1]
         self.λs: np.ndarray = np.linspace(self.λ0, self.λ1, self.width)
         self.dλ: float = self.λs[1] - self.λs[0]
-
-        self.t0: float = self.ts_unscaled[0]
-        self.t1: float = self.ts_unscaled[-1]
+        self.t0: float = self.ts_in[0]
+        self.t1: float = self.ts_in[-1]
         self.ts: np.ndarray = np.linspace(self.t0, self.t1, self.height)
         self.dt: float = self.ts[1] - self.ts[0]
+        interp = RegularGridInterpolator((self.ts_in, self.λs_in), self.img_in)
+        yi, xi = np.meshgrid(self.ts, self.λs, indexing="ij")
+        self.img: np.ndarray = interp((yi, xi))
 
 
 @dataclass
@@ -437,28 +460,6 @@ class Filter:
         return filter_image
 
 
-def interpolate_image(u_in: np.ndarray, dim: list) -> np.ndarray:
-    """
-    Interpolate image to dim x dim
-
-    Args:
-        u_in (np.ndarray): original input image
-        dim (int): output image dimension in both axes
-
-    Returns: interpolated image
-
-    """
-
-    x = np.linspace(0, 1, u_in.shape[1])
-    y = np.linspace(0, 1, u_in.shape[0])
-    interp = RegularGridInterpolator((y, x), u_in)
-    xi = np.linspace(0, 1, dim[1])
-    yi = np.linspace(0, 1, dim[0])
-    yy, xx = np.meshgrid(yi, xi, indexing="ij")
-
-    return interp((yy, xx))
-
-
 def plot_line_profiles(
     img: np.ndarray,
     img_filtered: np.ndarray,
@@ -694,9 +695,9 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
-    padding = 0.20,
-    cross_width = 0,
-    gaussian_blur = 0,
+    padding=0.20,
+    cross_width=0,
+    gaussian_blur=0,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -754,44 +755,28 @@ def transient_grating_artifact_filter(
     # Load 2D spectroscopy measurement data from input file (Matlab, Excel, or .csv)
     fname_path: Path = Path(f"{fname}")
     img_in: np.ndarray
-    λs_unscaled: np.ndarray
-    ts_unscaled: np.ndarray
+    λs_in: np.ndarray
+    ts_in: np.ndarray
     df: pd.DataFrame = pd.DataFrame()
     if fname_path.suffix == ".mat":
         matlab_data: dict = loadmat(str(Path("data") / fname_path))
         img_in = matlab_data["Data"]
-        λs_unscaled = matlab_data["Wavelength"].flatten()
-        ts_unscaled = matlab_data["Time"].flatten()
+        λs_in = matlab_data["Wavelength"].flatten()
+        ts_in = matlab_data["Time"].flatten()
     elif fname_path.suffix in [".csv", ".xlsx", ".xls"]:
         df = pd.read_excel(str(Path("data") / fname_path), header=None)
         img_in = df.iloc[1:, 1:].to_numpy()
-        λs_unscaled = df.iloc[0, 1:].to_numpy()
-        ts_unscaled = df.iloc[1:, 0].to_numpy()
+        λs_in = df.iloc[0, 1:].to_numpy()
+        ts_in = df.iloc[1:, 0].to_numpy()
     else:
         raise ValueError(f"Input file '{fname}' is not a Matlab, Excel, or .csv file!")
-    if len(λs_unscaled) != img_in.shape[1] or len(ts_unscaled) != img_in.shape[0]:
-        raise ValueError(
-            f"Input file '{fname}' array dimensions are inconsistent"
-            " (mismatch between Data vs Wavelength and/or Time array dimensions)!"
-        )
-
-    # Interpolate image dimensions to nearest larger power of two, if requested
-    img: np.ndarray
-    if interpolate_image_to_power_of_two:
-        dim: list = [
-            int(2 ** np.ceil(np.log2(img_in.shape[0]))),
-            int(2 ** np.ceil(np.log2(img_in.shape[1]))),
-        ]
-        img = interpolate_image(u_in=img_in, dim=dim)
-    else:
-        img = img_in
 
     # Create ImageSpecs class object containing spectroscopy image specifications
     img_specs: ImageSpecs = ImageSpecs(
-        λs_unscaled=λs_unscaled,
-        ts_unscaled=ts_unscaled,
-        height=img.shape[0],
-        width=img.shape[1],
+        λs_in=λs_in,
+        ts_in=ts_in,
+        img_in=img_in,
+        interpolate_image_to_power_of_two=interpolate_image_to_power_of_two,
     )
 
     # Create Artifact class object containing artifact specifications
@@ -804,7 +789,7 @@ def transient_grating_artifact_filter(
 
     # Extract periodic and smooth component DFTs from input image, calculate
     # corresponding component images from the inverse DFTs
-    periodic_dft, smooth_dft = per(img, inverse_dft=False)
+    periodic_dft, smooth_dft = per(img_specs.img, inverse_dft=False)
     periodic_dft_mag, smooth_dft_mag = np.log10(
         np.abs(np.fft.fftshift(periodic_dft)) + 1e-10
     ), np.log10(np.abs(np.fft.fftshift(smooth_dft)) + 1e-10)
@@ -814,7 +799,7 @@ def transient_grating_artifact_filter(
 
     # Design ellipse-shaped filter with cutout at center
     img_dft_mag: np.ndarray = np.log10(
-        np.abs(np.fft.fftshift(np.fft.fft2(img))) + 1e-10
+        np.abs(np.fft.fftshift(np.fft.fft2(img_specs.img))) + 1e-10
     )
     flt: Filter = Filter(
         img_dft_mag=periodic_dft_mag,
@@ -843,7 +828,7 @@ def transient_grating_artifact_filter(
 
     # Plot line profile at λ0 and perpendicular to artifact though it's center (normal)
     fig_normal: Figure = plot_line_profiles(
-        img=img,
+        img=img_specs.img,
         img_filtered=img_filtered,
         img_specs=img_specs,
         artifact=artifact,
@@ -852,12 +837,12 @@ def transient_grating_artifact_filter(
     # Plot the image & DFT pairs (original, periodic, smooth, filtered u, filtered u)
     fig_images_and_dfts: Figure = plot_images_and_dfts(
         images=[
-            img,
+            img_specs.img,
             periodic,
             smooth,
             periodic_filtered,
             img_filtered,
-            img - img_filtered,
+            img_specs.img - img_filtered,
         ],
         dfts=[
             img_dft_mag,
@@ -891,7 +876,7 @@ def transient_grating_artifact_filter(
         savemat(
             str(Path("output") / f"{fname_path.stem}_filtering_results.mat"),
             {
-                "Data": img,
+                "Data": img_specs.img,
                 "periodic": periodic,
                 "smooth": smooth,
                 "periodic_filtered": periodic_filtered,
@@ -920,7 +905,7 @@ def transient_grating_artifact_filter(
             sheet_array: np.ndarray = df.iloc[:, :].to_numpy()
             write_excel_sheet(
                 sheet_array=sheet_array,
-                array_data=img,
+                array_data=img_specs.img,
                 array_name="Data",
                 df=df,
                 writer=writer,
