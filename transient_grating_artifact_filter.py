@@ -696,12 +696,25 @@ def plot_images_and_dfts(
 
 
 def write_excel_sheet(
-    sheet_array: np.ndarray,
     array_data: np.ndarray,
     array_name: str,
     df: pd.DataFrame,
     writer: pd.ExcelWriter,
 ):
+    """
+    Write a dataframe to an Excel sheet
+
+    Args:
+        array_data (np.ndarray): image data to insert into the output array
+        array_name (str): name of the array to give to the sheet
+        df (DataFrame): reference dataframe containing the t and λ
+        writer (pd.ExcelWriter): Excel writer object
+
+    Returns: None
+
+    """
+
+    sheet_array: np.ndarray = df.iloc[:, :].to_numpy()
     sheet_array[1:, 1:] = array_data
     df_local = pd.DataFrame(sheet_array, index=df.index, columns=df.columns)
     df_local.to_excel(writer, sheet_name=array_name, index=False, header=False)
@@ -715,52 +728,72 @@ def write_output_excel_file(
     flt: Filter,
     periodic: np.ndarray,
     smooth: np.ndarray,
-    img_filtered: np.ndarray,
     periodic_filtered: np.ndarray,
+    img_filtered: np.ndarray,
+    img_filtered_final: np.ndarray,
 ):
+    """
+    Write data to an Excel file
+
+    Args:
+        fname_path (Path): Output filename
+        df (pd.DataFrame): Dataframe with image data
+        img_specs (ImageSpecs): Image Class object
+        artifact (Artifact): Artifact Class object
+        flt (Filter): Filter Class object
+        periodic (np.ndarray): Periodic component of the image
+        smooth (np.ndarray): Smooth component of the image
+        periodic_filtered (np.ndarray): Filtered periodic component of the image
+        img_filtered (np.ndarray): Filtered image
+        img_filtered_final (np.ndarray): Final filtered image (gaussian blur applied)
+
+    Returns: None
+
+    """
+
     with pd.ExcelWriter(
         Path("output") / f"{fname_path.stem}_filtering_results.xlsx"
     ) as writer:
         df.iloc[0, 1:] = img_specs.λs
         df.iloc[1:, 0] = img_specs.ts
-        sheet_array: np.ndarray = df.iloc[:, :].to_numpy()
+
         write_excel_sheet(
-            sheet_array=sheet_array,
             array_data=img_specs.img,
             array_name="Data",
             df=df,
             writer=writer,
         )
         write_excel_sheet(
-            sheet_array=sheet_array,
             array_data=periodic,
             array_name="Periodic",
             df=df,
             writer=writer,
         )
         write_excel_sheet(
-            sheet_array=sheet_array,
             array_data=smooth,
             array_name="Smooth",
             df=df,
             writer=writer,
         )
         write_excel_sheet(
-            sheet_array=sheet_array,
             array_data=periodic_filtered,
             array_name="periodic_filtered",
             df=df,
             writer=writer,
         )
         write_excel_sheet(
-            sheet_array=sheet_array,
             array_data=img_filtered,
             array_name="Data_filtered",
             df=df,
             writer=writer,
         )
         write_excel_sheet(
-            sheet_array=sheet_array,
+            array_data=img_filtered_final,
+            array_name="Data_filtered_gaussian_blur",
+            df=df,
+            writer=writer,
+        )
+        write_excel_sheet(
             array_data=flt.f,
             array_name="filter_2D",
             df=df,
@@ -787,6 +820,61 @@ def write_output_excel_file(
         df_info.to_excel(writer, sheet_name="info", index=False)
 
         return None
+
+
+def write_output_matlab_file(
+    fname_path: Path,
+    img_specs: ImageSpecs,
+    artifact: Artifact,
+    flt: Filter,
+    periodic: np.ndarray,
+    smooth: np.ndarray,
+    periodic_filtered: np.ndarray,
+    img_filtered: np.ndarray,
+    img_filtered_final: np.ndarray,
+):
+    """
+    Write data to an Excel file
+
+    Args:
+        fname_path (Path): Output filename
+        img_specs (ImageSpecs): Image Class object
+        artifact (Artifact): Artifact Class object
+        flt (Filter): Filter Class object
+        periodic (np.ndarray): Periodic component of the image
+        smooth (np.ndarray): Smooth component of the image
+        periodic_filtered (np.ndarray): Filtered periodic component of the image
+        img_filtered (np.ndarray): Filtered image
+        img_filtered_final (np.ndarray): Final filtered image (gaussian blur applied)
+
+    Returns: None
+
+    """
+
+    savemat(
+        str(Path("output") / f"{fname_path.stem}_filtering_results.mat"),
+        {
+            "Data": img_specs.img,
+            "periodic": periodic,
+            "smooth": smooth,
+            "periodic_filtered": periodic_filtered,
+            "Data_filtered": img_filtered,
+            "Data_filtered_gaussian_blur": img_filtered_final,
+            "Wavelength": img_specs.λs,
+            "Time": img_specs.ts,
+            "filter_2D": flt.f,
+            "lambda0_pump_nm": artifact.λ0,
+            "artifact_extent_wavelength_nm": artifact.extent_λ,
+            "artifact_extent_time_ps": artifact.extent_t,
+            "threshold_ellipse": flt.threshold_ellipse,
+            "threshold_cutout": flt.threshold_cutout,
+            "ellipse_padding": flt.ellipse_padding,
+            "cross_pass_band_width": flt.cross_pass_band_width,
+            "gaussian_blur": flt.gaussian_blur,
+            "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
+            "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
+        },
+    )
 
 
 def transient_grating_artifact_filter(
@@ -876,7 +964,7 @@ def transient_grating_artifact_filter(
     else:
         raise ValueError(f"Input file '{fname}' is not a Matlab, Excel, or .csv file!")
 
-    # Create ImageSpecs class object containing spectroscopy image specifications
+    # Create ImageSpecs class object containing spectroscopy image data
     img_specs: ImageSpecs = ImageSpecs(
         λs_in=λs_in,
         ts_in=ts_in,
@@ -892,8 +980,8 @@ def transient_grating_artifact_filter(
         img_specs=img_specs,
     )
 
-    # Extract periodic and smooth component DFTs from input image, calculate
-    # corresponding component images from the inverse DFTs
+    # Extract periodic and smooth component DFTs from the input image ([Moisan, 2010]),
+    # calculate the corresponding component images from their inverse DFTs
     periodic_dft, smooth_dft = per(img_specs.img, inverse_dft=False)
     periodic_dft_mag, smooth_dft_mag = np.log10(
         np.abs(np.fft.fftshift(periodic_dft)) + 1e-10
@@ -902,10 +990,7 @@ def transient_grating_artifact_filter(
         np.fft.ifft2(smooth_dft)
     )
 
-    # Design ellipse-shaped filter with cutout at center
-    img_dft_mag: np.ndarray = np.log10(
-        np.abs(np.fft.fftshift(np.fft.fft2(img_specs.img))) + 1e-10
-    )
+    # Build the artifact filter binary image
     flt: Filter = Filter(
         img_dft_mag=periodic_dft_mag,
         threshold_ellipse=threshold_ellipse,
@@ -918,24 +1003,32 @@ def transient_grating_artifact_filter(
         gaussian_blur=gaussian_blur,
     )
 
-    # Filter periodic component in the Fourier domain, reconstruct filtered image
+    # Filter the artifact from the periodic component, reconstruct the filtered image
     periodic_filtered_dft: np.ndarray = periodic_dft * np.fft.fftshift(flt.f)
     periodic_filtered: np.ndarray = np.real(np.fft.ifft2(periodic_filtered_dft))
     img_filtered: np.ndarray = smooth + periodic_filtered
 
+    # Light 3x3 Gaussian filtering of the output image to remove high frequency noise
+    img_filtered_final: np.ndarray = ndimage.gaussian_filter(img_filtered, 3)
+
     # Calculate DFT log magnitude images (add small offset so null DC doesn't break log)
-    img_filtered_dft: np.ndarray = np.fft.fft2(img_filtered)
-    img_filtered_dft_mag: np.ndarray = np.log10(
-        np.abs(np.fft.fftshift(img_filtered_dft)) + 1e-10
+    img_dft_mag: np.ndarray = np.log10(
+        np.abs(np.fft.fftshift(np.fft.fft2(img_specs.img))) + 1e-10
     )
     periodic_filtered_dft_mag: np.ndarray = np.log10(
         np.abs(np.fft.fftshift(periodic_filtered_dft)) + 1e-10
+    )
+    img_filtered_dft_mag: np.ndarray = np.log10(
+        np.abs(np.fft.fftshift(np.fft.fft2(img_filtered))) + 1e-10
+    )
+    img_filtered_final_dft_mag: np.ndarray = np.log10(
+        np.abs(np.fft.fftshift(np.fft.fft2(img_filtered_final))) + 1e-10
     )
 
     # Plot line profile at λ0 and perpendicular to artifact though it's center (normal)
     fig_normal: Figure = plot_line_profiles(
         img=img_specs.img,
-        img_filtered=img_filtered,
+        img_filtered=img_filtered_final,
         img_specs=img_specs,
         artifact=artifact,
     )
@@ -948,6 +1041,7 @@ def transient_grating_artifact_filter(
             smooth,
             periodic_filtered,
             img_filtered,
+            img_filtered_final,
             img_specs.img - img_filtered,
         ],
         dfts=[
@@ -956,15 +1050,17 @@ def transient_grating_artifact_filter(
             smooth_dft_mag,
             periodic_filtered_dft_mag,
             img_filtered_dft_mag,
+            img_filtered_final_dft_mag,
             img_dft_mag - img_filtered_dft_mag,
         ],
         titles=[
-            "Original image (u = s + u)",
-            "Periodic comp. (u)",
-            "Smooth comp. (s)",
-            "Filt. periodic comp. (uf)",
-            "Filt. image (uf = s + uf)",
-            "Artifact (u - uf)",
+            "Original image\nu = s + u",
+            "Periodic component\nu",
+            "Smooth component\ns",
+            "Filt. periodic comp.\nuf",
+            "Filt. image\nuf = s + uf",
+            "Filt. image + 3x3 gaussian\nBlur(uf)",
+            "Artifact\nu - uf",
         ],
         img_specs=img_specs,
         artifact=artifact,
@@ -979,28 +1075,16 @@ def transient_grating_artifact_filter(
     )
     fig_normal.savefig(Path("output") / f"{fname_path.stem}_normal.png")
     if fname_path.suffix == ".mat":
-        savemat(
-            str(Path("output") / f"{fname_path.stem}_filtering_results.mat"),
-            {
-                "Data": img_specs.img,
-                "periodic": periodic,
-                "smooth": smooth,
-                "periodic_filtered": periodic_filtered,
-                "Data_filtered": img_filtered,
-                "Wavelength": img_specs.λs,
-                "Time": img_specs.ts,
-                "filter_2D": flt.f,
-                "lambda0_pump_nm": artifact.λ0,
-                "artifact_extent_wavelength_nm": artifact.extent_λ,
-                "artifact_extent_time_ps": artifact.extent_t,
-                "threshold_ellipse": flt.threshold_ellipse,
-                "threshold_cutout": flt.threshold_cutout,
-                "ellipse_padding": flt.ellipse_padding,
-                "cross_pass_band_width": flt.cross_pass_band_width,
-                "gaussian_blur": flt.gaussian_blur,
-                "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
-                "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
-            },
+        write_output_matlab_file(
+            fname_path=fname_path,
+            img_specs=img_specs,
+            artifact=artifact,
+            flt=flt,
+            periodic=periodic,
+            smooth=smooth,
+            periodic_filtered=periodic_filtered,
+            img_filtered=img_filtered,
+            img_filtered_final=img_filtered_final,
         )
     else:
         write_output_excel_file(
@@ -1011,8 +1095,9 @@ def transient_grating_artifact_filter(
             flt=flt,
             periodic=periodic,
             smooth=smooth,
-            img_filtered=img_filtered,
             periodic_filtered=periodic_filtered,
+            img_filtered=img_filtered,
+            img_filtered_final=img_filtered_final,
         )
 
     # Return results

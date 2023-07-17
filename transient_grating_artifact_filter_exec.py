@@ -6,7 +6,7 @@ test script to call transient.grating_artifact_filter.oy
 from transient_grating_artifact_filter import transient_grating_artifact_filter
 import sys
 
-# Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
+# Structures to simulate: "croix", "gold_film", "nano_pillars", "rhodamine"
 substrate_type: str = "rhodamine"
 
 # Thresholds for filter construction
@@ -19,7 +19,14 @@ cross_pass_band_width: int = 1
 pass_upper_left_lower_right_quadrants: bool = True
 
 # Define simulation parameters for the selected structure
-if substrate_type == "gold_film":
+if substrate_type == "croix":
+    # Smooth unstructured gold film
+    fname: str = "Croix.mat"
+    λ0_pump: float = 670.0
+    artifact_extent_λ: float = 26
+    artifact_extent_t: float = 0.35
+
+elif substrate_type == "gold_film":
     # Smooth unstructured gold film
     fname: str = "Figure_article_Parallel.mat"
     λ0_pump: float = 600.0
