@@ -29,8 +29,15 @@ Function parameters:
 - *threshold_ellipse*: threshold for filter ellipse identification ([0..1])
 - *threshold_cutout*: threshold for filter central cutout identification ([0..1])
 
-Optional parameters:
-- ...
+Optional parameters (filter fine tuning):
+  - *padding*: extra padding for the filter ellipse relative the thresholded area 
+               ([0..1], default is 0.2, i.e. +20%),
+  - *cross_width* = width of a cross-shaped band cutout along the horizontal and
+                    vertical axes in the Fourier domain from the filter to pass
+                    any remaining non-periodic content left over from the
+                    smooth/periodic decomposition (default is 0, i.e. no cross cutout),
+  - *gaussian_blur* = gaussian blur kernel size applied to the fileter to reduce
+                      ringing(default is 0 pixels),
 
 Output:
 - Files written to the *output* subdirectory
@@ -38,15 +45,10 @@ Output:
 Testing the script: call *transient_grating_artifact_filter_exec.py*
 
 Debugging:
-- The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to reach the optimal compromise between removing the artifact and preserving the underlying baseline spectroscopy data.
-- In the first displayed figure, the script draws a cross-hair pattern over the elliptical mask identified from the thresholded area with *threshold_ellipse*. The *extent_t* and *extent_λ* input parameters can be fine-tuned to line up the cross-hair with the ellipse axes.
-- Class *Filter*, some parameters are input arugments to the *transient_grating_artifact_filter()* method:
-  - *padding*: extra padding for the filter ellipse relative the thresholded area with *threshold_ellipse* ([0..1], default is 0.2, i.e. +20%)
-  - *cross_width* = width of cross-shaped band along the horizontal and vertical
-                        axes in the Fourier domain cutout from the filter to pass
-                        any remaining non-periodic content left over from
-                        the smooth/periodic decomposition (default is 0 pixels)
-  - *gaussian_blur* = gaussian blur kernel size applied to the fileter to
-                         reduce ringing(default is 0 pixels)
-  - *fill_ellipse*: fill ellipse (False for outline only for debugging, default is True)
+- The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to
+  reach the optimal compromise between removing the artifact and preserving the 
+  underlying baseline spectroscopy data.
+- The script draws a cross-hair pattern over the elliptical mask identified from the
+  thresholded area with *threshold_ellipse*. The *extent_t* and *extent_λ* input
+  parameters can be fine-tuned to line up the cross-hair with the ellipse axes.
 

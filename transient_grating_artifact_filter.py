@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.4"
+__version__: str = "2.5"
 
 
 @dataclass
@@ -325,7 +325,7 @@ class Filter:
         return (
             ellipse_long_axis_radius,
             ellipse_short_axis_radius,
-            img_binary_ellipse_rgb
+            img_binary_ellipse_rgb,
         )
 
     def build_filter(self) -> np.ndarray:
@@ -421,9 +421,14 @@ class Filter:
         axs[1].imshow(filter_image, cmap="gray")
 
         # Draw filter ellipse outline over periodic component DFT
-        axs[2].set(title="Filter ellipse outline over periodic component DFT")
+        axs[2].set(
+            title="Filter ellipse outline over binarized periodic component DFT"
+            "\nNB: data limited to 4 decade dynamic range in binarization"
+        )
         periodic_with_ellipse_outline: np.ndarray = np.copy(self.img_dft_mag)
-        periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(self.img_dft_mag)
+        periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(
+            self.img_dft_mag
+        )
         axs[2].imshow(periodic_with_ellipse_outline, cmap="gray")
 
         plt.tight_layout()
@@ -584,6 +589,7 @@ def plot_images_and_dfts(
     artifact: Artifact,
     flt: Filter,
     fname: str,
+    image_cmap: str = "seismic",
 ) -> Figure:
     """
 
@@ -597,6 +603,7 @@ def plot_images_and_dfts(
         artifact (Artifact): artifact specifications
         flt (Filter): filter specifications
         fname (str): Input image filename
+        image_cmap (str): colormap for images
 
     Returns: matplotlib Figure class object
 
@@ -622,7 +629,7 @@ def plot_images_and_dfts(
         # Top row: images with colorbar at the right
         top_im: plt.axes.AxesImage = top_ax.imshow(
             img,
-            cmap="seismic",
+            cmap=image_cmap,
             vmin=-np.max([np.max(img) for img in images]),
             vmax=np.max([np.max(img) for img in images]),
             extent=[img_specs.λ0, img_specs.λ1, img_specs.t0, img_specs.t1],
@@ -687,7 +694,9 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
-    cross_width: int = 0,
+    padding = 0.20,
+    cross_width = 0,
+    gaussian_blur = 0,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -706,7 +715,10 @@ def transient_grating_artifact_filter(
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
+        padding (float): padding for filter cutout (default = 0.20, i.e. 20%)
         cross_width (int): width of cross cutout in filter (default = 0)
+        gaussian_blur (int): width of Gaussian blur kernel in filter (default = 0,
+                             i.e. no blur
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                                   nearest larger power of two
                                                   (default = False)
@@ -810,7 +822,9 @@ def transient_grating_artifact_filter(
         threshold_cutout=threshold_cutout,
         img_specs=img_specs,
         artifact=artifact,
+        padding=padding,
         cross_width=cross_width,
+        gaussian_blur=gaussian_blur,
     )
 
     # Filter periodic component in the Fourier domain, reconstruct filtered image
@@ -855,10 +869,10 @@ def transient_grating_artifact_filter(
         ],
         titles=[
             "Original image (u = s + u)",
-            "Periodic component (u)",
-            "Smooth component (s)",
-            "Filtered periodic component (uf)",
-            "Filtered image (uf = s + uf)",
+            "Periodic comp. (u)",
+            "Smooth comp. (s)",
+            "Filt. periodic comp. (uf)",
+            "Filt. image (uf = s + uf)",
             "Artifact (u - uf)",
         ],
         img_specs=img_specs,
