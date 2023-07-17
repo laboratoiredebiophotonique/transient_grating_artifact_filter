@@ -410,18 +410,18 @@ class Filter:
         # Pass (do not filter) bands around horizontal and vertical axes, if requested
         if self.cross_pass_band_width > 0:
             filter_image[
-            self.img_specs.y0
-            - self.cross_pass_band_width // 2: self.img_specs.y0
-                                               + self.cross_pass_band_width // 2
-                                               + 1,
+                self.img_specs.y0
+                - self.cross_pass_band_width // 2 : self.img_specs.y0
+                + self.cross_pass_band_width // 2
+                + 1,
                 :,
             ] = 1
             filter_image[
                 :,
-            self.img_specs.x0
-            - self.cross_pass_band_width // 2: self.img_specs.x0
-                                               + self.cross_pass_band_width // 2
-                                               + 1,
+                self.img_specs.x0
+                - self.cross_pass_band_width // 2 : self.img_specs.x0
+                + self.cross_pass_band_width // 2
+                + 1,
             ] = 1
             filter_image[filter_image == 2] = 1
 
@@ -707,6 +707,88 @@ def write_excel_sheet(
     df_local.to_excel(writer, sheet_name=array_name, index=False, header=False)
 
 
+def write_output_excel_file(
+    fname_path: Path,
+    df: pd.DataFrame,
+    img_specs: ImageSpecs,
+    artifact: Artifact,
+    flt: Filter,
+    periodic: np.ndarray,
+    smooth: np.ndarray,
+    img_filtered: np.ndarray,
+    periodic_filtered: np.ndarray,
+):
+    with pd.ExcelWriter(
+        Path("output") / f"{fname_path.stem}_filtering_results.xlsx"
+    ) as writer:
+        df.iloc[0, 1:] = img_specs.λs
+        df.iloc[1:, 0] = img_specs.ts
+        sheet_array: np.ndarray = df.iloc[:, :].to_numpy()
+        write_excel_sheet(
+            sheet_array=sheet_array,
+            array_data=img_specs.img,
+            array_name="Data",
+            df=df,
+            writer=writer,
+        )
+        write_excel_sheet(
+            sheet_array=sheet_array,
+            array_data=periodic,
+            array_name="Periodic",
+            df=df,
+            writer=writer,
+        )
+        write_excel_sheet(
+            sheet_array=sheet_array,
+            array_data=smooth,
+            array_name="Smooth",
+            df=df,
+            writer=writer,
+        )
+        write_excel_sheet(
+            sheet_array=sheet_array,
+            array_data=periodic_filtered,
+            array_name="periodic_filtered",
+            df=df,
+            writer=writer,
+        )
+        write_excel_sheet(
+            sheet_array=sheet_array,
+            array_data=img_filtered,
+            array_name="Data_filtered",
+            df=df,
+            writer=writer,
+        )
+        write_excel_sheet(
+            sheet_array=sheet_array,
+            array_data=flt.f,
+            array_name="filter_2D",
+            df=df,
+            writer=writer,
+        )
+        df_info = pd.DataFrame(
+            {
+                "lambda0_pump_nm": [artifact.λ0],
+                "artifact_extent_wavelength_nm": [artifact.extent_λ],
+                "artifact_extent_time_ps": [artifact.extent_t],
+                "threshold_ellipse": [flt.threshold_ellipse],
+                "threshold_cutout": [flt.threshold_cutout],
+                "ellipse_padding": [flt.ellipse_padding],
+                "cross_pass_band_width": [flt.cross_pass_band_width],
+                "gaussian_blur": [flt.gaussian_blur],
+                "filter_ellipse_long_axis_radius_pixels": [
+                    flt.ellipse_long_axis_radius
+                ],
+                "filter_ellipse_short_axis_radius_pixels": [
+                    flt.ellipse_short_axis_radius
+                ],
+            }
+        )
+        df_info.to_excel(writer, sheet_name="info", index=False)
+
+        return None
+
+
 def transient_grating_artifact_filter(
     fname: str,
     lambda0_pump: float,
@@ -908,11 +990,11 @@ def transient_grating_artifact_filter(
                 "Wavelength": img_specs.λs,
                 "Time": img_specs.ts,
                 "filter_2D": flt.f,
-                "lambda0_pump_nm": lambda0_pump,
+                "lambda0_pump_nm": artifact.λ0,
                 "artifact_extent_wavelength_nm": artifact.extent_λ,
                 "artifact_extent_time_ps": artifact.extent_t,
-                "threshold_ellipse": threshold_ellipse,
-                "threshold_cutout": threshold_cutout,
+                "threshold_ellipse": flt.threshold_ellipse,
+                "threshold_cutout": flt.threshold_cutout,
                 "ellipse_padding": flt.ellipse_padding,
                 "cross_pass_band_width": flt.cross_pass_band_width,
                 "gaussian_blur": flt.gaussian_blur,
@@ -921,73 +1003,17 @@ def transient_grating_artifact_filter(
             },
         )
     else:
-        with pd.ExcelWriter(
-            Path("output") / f"{fname_path.stem}_filtering_results.xlsx"
-        ) as writer:
-            df.iloc[0, 1:] = img_specs.λs
-            df.iloc[1:, 0] = img_specs.ts
-            sheet_array: np.ndarray = df.iloc[:, :].to_numpy()
-            write_excel_sheet(
-                sheet_array=sheet_array,
-                array_data=img_specs.img,
-                array_name="Data",
-                df=df,
-                writer=writer,
-            )
-            write_excel_sheet(
-                sheet_array=sheet_array,
-                array_data=periodic,
-                array_name="Periodic",
-                df=df,
-                writer=writer,
-            )
-            write_excel_sheet(
-                sheet_array=sheet_array,
-                array_data=smooth,
-                array_name="Smooth",
-                df=df,
-                writer=writer,
-            )
-            write_excel_sheet(
-                sheet_array=sheet_array,
-                array_data=periodic_filtered,
-                array_name="periodic_filtered",
-                df=df,
-                writer=writer,
-            )
-            write_excel_sheet(
-                sheet_array=sheet_array,
-                array_data=img_filtered,
-                array_name="Data_filtered",
-                df=df,
-                writer=writer,
-            )
-            write_excel_sheet(
-                sheet_array=sheet_array,
-                array_data=flt.f,
-                array_name="filter_2D",
-                df=df,
-                writer=writer,
-            )
-            df_info = pd.DataFrame(
-                {
-                    "lambda0_pump_nm": [lambda0_pump],
-                    "artifact_extent_wavelength_nm": [artifact.extent_λ],
-                    "artifact_extent_time_ps": [artifact.extent_t],
-                    "threshold_ellipse": [threshold_ellipse],
-                    "threshold_cutout": [threshold_cutout],
-                    "ellipse_padding": [flt.ellipse_padding],
-                    "cross_pass_band_width": [flt.cross_pass_band_width],
-                    "gaussian_blur": [flt.gaussian_blur],
-                    "filter_ellipse_long_axis_radius_pixels": [
-                        flt.ellipse_long_axis_radius
-                    ],
-                    "filter_ellipse_short_axis_radius_pixels": [
-                        flt.ellipse_short_axis_radius
-                    ],
-                }
-            )
-            df_info.to_excel(writer, sheet_name="info", index=False)
+        write_output_excel_file(
+            fname_path=fname_path,
+            df=df,
+            img_specs=img_specs,
+            artifact=artifact,
+            flt=flt,
+            periodic=periodic,
+            smooth=smooth,
+            img_filtered=img_filtered,
+            periodic_filtered=periodic_filtered,
+        )
 
     # Return results
     return periodic, smooth, img_filtered, periodic_filtered, flt.f
