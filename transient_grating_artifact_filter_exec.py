@@ -15,6 +15,7 @@ threshold_cutout: float = 0.5
 
 # Cross width for filter construction
 cross_width: int = 0
+pass_upper_left_lower_right_quadrants: bool = True
 
 # Define simulation parameters for the selected structure
 if substrate_type == "gold_film":
@@ -50,6 +51,7 @@ transient_grating_artifact_filter(
     threshold_ellipse=threshold_ellipse,
     threshold_cutout=threshold_cutout,
     cross_width=cross_width,
+    pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
 )
 
 # If running from the command line, pause for user input to keep figures visible.

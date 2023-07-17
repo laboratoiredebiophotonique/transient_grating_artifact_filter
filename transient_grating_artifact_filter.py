@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.6"
+__version__: str = "2.7"
 
 
 @dataclass
@@ -178,6 +178,8 @@ class Filter:
                         axes in the Fourier domain, cutout from the filter to pass
                         any remaining non-periodic content left over from
                         the smooth/periodic decomposition (default is 0)
+    pass_upper_left_lower_right_quadrants (bool) = pass the upper left and lower right
+                                                   quadrants of filter (default = False)
     gaussian_blur: int = gaussian blur kernel size applied to the fileter to
                          reduce ringing(default is 0)
 
@@ -190,6 +192,7 @@ class Filter:
     artifact: Artifact
     padding: float = 0.20
     cross_width: int = 0
+    pass_upper_left_lower_right_quadrants: bool = False
     gaussian_blur: int = 0
 
     def __post_init__(self):
@@ -359,7 +362,7 @@ class Filter:
 
         """
 
-        # Draw ellipses (filled and outline only)
+        # Draw ellipses (filled, and outline only for debugging)
         ellipse_image_binary: np.ndarray = np.ones(
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
@@ -399,7 +402,7 @@ class Filter:
             ellipse_image_binary.astype(np.float64) + cutout_image
         )
 
-        # Leave bands around horizontal and vertical axes intact, if requested
+        # Pass (do not filter) bands around horizontal and vertical axes, if requested
         if self.cross_width > 0:
             filter_image[
                 self.img_specs.y0
@@ -417,7 +420,17 @@ class Filter:
             ] = 1
             filter_image[filter_image == 2] = 1
 
-        # Gaussian blur to reduce ringing, if requested
+        # Pass (do not filter) upper-left and lower-right quadrants, if requested
+        if self.pass_upper_left_lower_right_quadrants:
+            filter_image[
+                0 : self.img_specs.height // 2, 0 : self.img_specs.width // 2
+            ] = 1
+            filter_image[
+                self.img_specs.height // 2 + 1 :, self.img_specs.width // 2 + 1 :
+            ] = 1
+            filter_image[filter_image == 2] = 1
+
+        # Gaussian blur the filter shape to reduce ringing, if requested
         if self.gaussian_blur > 0:
             filter_image = cv.GaussianBlur(
                 filter_image,
@@ -697,6 +710,7 @@ def transient_grating_artifact_filter(
     threshold_cutout: float,
     padding=0.20,
     cross_width=0,
+    pass_upper_left_lower_right_quadrants=False,
     gaussian_blur=0,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -718,6 +732,8 @@ def transient_grating_artifact_filter(
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
         padding (float): padding for filter cutout (default = 0.20, i.e. 20%)
         cross_width (int): width of cross cutout in filter (default = 0)
+        pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
+                                              quadrants of the filter (default = False)
         gaussian_blur (int): width of Gaussian blur kernel in filter (default = 0,
                              i.e. no blur
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
@@ -809,6 +825,7 @@ def transient_grating_artifact_filter(
         artifact=artifact,
         padding=padding,
         cross_width=cross_width,
+        pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
         gaussian_blur=gaussian_blur,
     )
 
