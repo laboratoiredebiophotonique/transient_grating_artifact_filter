@@ -157,7 +157,6 @@ class Filter:
                         the smooth/periodic decomposition (default is 0)
     gaussian_blur: int = gaussian blur kernel size applied to the fileter to
                          reduce ringing(default is 0)
-    fill_ellipse (bool): fill ellipse (False for outline only for debugging, default is True)
 
     """
 
@@ -167,7 +166,6 @@ class Filter:
     img_specs: ImageSpecs
     artifact: Artifact
     padding: float = 0.20
-    fill_ellipse: bool = True
     cross_width: int = 0
     gaussian_blur: int = 0
 
@@ -175,6 +173,7 @@ class Filter:
         (
             self.ellipse_long_axis_radius,
             self.ellipse_short_axis_radius,
+            self.img_binary_ellipse_rgb,
         ) = self.define_filter_ellipse()
         self.f: np.ndarray = self.build_filter()
 
@@ -245,12 +244,13 @@ class Filter:
         else:
             return 0.0
 
-    def define_filter_ellipse(self) -> Tuple[int, int]:
+    def define_filter_ellipse(self) -> Tuple[int, int, np.ndarray]:
         """
 
         Determine filter ellipse parameters from periodic component DFT magnitude
 
         Returns: ellipse_long_axis_radius (int), ellipse_short_axis_radius (int)
+                 img_binary_ellipse_rgb (np.ndarray)
 
         """
 
@@ -305,15 +305,7 @@ class Filter:
                 f"Threshold value for ellipse ({self.threshold_ellipse}) is too high!"
             )
 
-        # Draw ellipse above-threshold pixels and resulting shape, for validation
-        fig, ax = plt.subplots()
-        ax.set(
-            title="Filter ellipse binary image: threshold = "
-            f"{self.threshold_ellipse:.2f}, "
-            f"long axis radius = {ellipse_long_axis_radius} pixels, "
-            f"short axis radius = {ellipse_short_axis_radius} pixels"
-            f" ({self.padding * 100:.0f}% padding)"
-        )
+        # Build image of ellipse above-threshold pixels and resulting shape
         img_binary_ellipse_rgb = np.repeat(
             img_binary_ellipse[:, :, np.newaxis], 3, axis=2
         )
@@ -329,11 +321,11 @@ class Filter:
             (1, 0, 0),
             1,
         )
-        ax.imshow(img_binary_ellipse_rgb, cmap="gray")
 
         return (
             ellipse_long_axis_radius,
             ellipse_short_axis_radius,
+            img_binary_ellipse_rgb
         )
 
     def build_filter(self) -> np.ndarray:
@@ -344,8 +336,11 @@ class Filter:
 
         """
 
-        # Draw ellipse
+        # Draw ellipses (filled and outline only)
         ellipse_image_binary: np.ndarray = np.ones(
+            (self.img_specs.height, self.img_specs.width), dtype=np.uint8
+        )
+        ellipse_image_binary_outline: np.ndarray = np.zeros(
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
         cv.ellipse(
@@ -355,8 +350,18 @@ class Filter:
             -self.artifact.angle,
             0,
             360,
-            0 if self.fill_ellipse else 1,
-            -1 if self.fill_ellipse else 1,
+            0,
+            -1,
+        )
+        cv.ellipse(
+            ellipse_image_binary_outline,
+            (self.img_specs.x0, self.img_specs.y0),
+            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
+            -self.artifact.angle,
+            0,
+            360,
+            1,
+            1,
         )
 
         # Remove cutout from center of ellipse (pixels around origin above threshold)
@@ -390,7 +395,7 @@ class Filter:
             filter_image[filter_image == 2] = 1
 
         # Gaussian blur to reduce ringing, if requested
-        if self.gaussian_blur > 0 and self.fill_ellipse:
+        if self.gaussian_blur > 0:
             filter_image = cv.GaussianBlur(
                 filter_image,
                 (self.gaussian_blur, self.gaussian_blur),
@@ -398,10 +403,30 @@ class Filter:
                 sigmaY=0,
             )
 
-        # Show filter in a window
-        fig, ax = plt.subplots()
-        ax.set(title="Filter")
-        ax.imshow(filter_image, cmap="gray")
+        # Show images of thresholded pixels and filter
+        fig, axs = plt.subplots(3)
+
+        # Draw thresholded ellipse binary image with major/minor axes
+        axs[0].set(
+            title="Filter ellipse binary image: threshold = "
+            f"{self.threshold_ellipse:.2f}, "
+            f"long axis radius = {self.ellipse_long_axis_radius} pixels, "
+            f"short axis radius = {self.ellipse_short_axis_radius} pixels"
+            f" ({self.padding * 100:.0f}% padding)"
+        )
+        axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
+
+        # Draw binary filter image
+        axs[1].set(title="Filter image")
+        axs[1].imshow(filter_image, cmap="gray")
+
+        # Draw filter ellipse outline over periodic component DFT
+        axs[2].set(title="Filter ellipse outline over periodic component DFT")
+        periodic_with_ellipse_outline: np.ndarray = np.copy(self.img_dft_mag)
+        periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(self.img_dft_mag)
+        axs[2].imshow(periodic_with_ellipse_outline, cmap="gray")
+
+        plt.tight_layout()
 
         # Return filter
         return filter_image
@@ -429,14 +454,15 @@ def interpolate_image(u_in: np.ndarray, dim: list) -> np.ndarray:
     return interp((yy, xx))
 
 
-def plot_λ0_and_normal_line_profiles(
+def plot_line_profiles(
     img: np.ndarray,
     img_filtered: np.ndarray,
     img_specs: ImageSpecs,
     artifact: Artifact,
 ) -> Figure:
     """
-    Plot line profiles vertically at λ0 and along the normal to the artifact
+    Plot line profiles vertically at λ0, horizontally at mid-point,
+    and along the normal to the artifact.
 
     Args:
         img (np.ndarray): original image
@@ -448,7 +474,33 @@ def plot_λ0_and_normal_line_profiles(
 
     """
 
-    # Line profiles (raw & filtered) along the normal to the artifact
+    # Define figure and axes
+    fig, axs = plt.subplots(3)
+
+    # Raw and filtered vertical line profiles at λ0
+    λ0_profile: np.ndarray = np.flip(img[:, artifact.λ0_pixels])
+    λ0_profile_filtered: np.ndarray = np.flip(img_filtered[:, artifact.λ0_pixels])
+    axs[0].plot(img_specs.ts, λ0_profile, label="Raw")
+    axs[0].plot(img_specs.ts, λ0_profile_filtered, "r", label="Filtered")
+    axs[0].set(
+        xlabel="time (s)",
+        ylabel=r"$\Delta$R/R",
+        title=f"Raw and filtered vertical line profiles at λ0 ({artifact.λ0} nm)",
+        xlim=(img_specs.ts[0], img_specs.ts[-1]),
+    )
+
+    # Raw and filtered horizontal line profiles at vertical midpoint
+    mid_horizontal_profile: np.ndarray = img[img.shape[0] // 2, :]
+    mid_horizontal_profile_filtered: np.ndarray = img_filtered[img.shape[0] // 2, :]
+    axs[1].plot(img_specs.λs, mid_horizontal_profile, label="Raw")
+    axs[1].plot(img_specs.λs, mid_horizontal_profile_filtered, label="Filtered")
+    axs[1].set(
+        xlabel="λ (pm)",
+        ylabel=r"$\Delta$R/R",
+        title=f"Raw and filtered horizontal line profiles at vertical midpoint ({img_specs.ts[img.shape[0] // 2]} ps)",
+    )
+
+    # Raw and filtered line profiles along the normal to the artifact
     num: int = 1000
     x, y = np.linspace(
         artifact.normal_x0_pixels, artifact.normal_x1_pixels, num
@@ -459,64 +511,27 @@ def plot_λ0_and_normal_line_profiles(
     normal_profile_filtered: np.ndarray = np.flip(
         ndimage.map_coordinates(img_filtered, np.vstack((y, x)))
     )
-
-    # Vertical line profiles (raw & filtered) at λ0
-    λ0_profile: np.ndarray = np.flip(img[:, artifact.λ0_pixels])
-    λ0_profile_filtered: np.ndarray = np.flip(img_filtered[:, artifact.λ0_pixels])
-
-    # Plot line profiles and their DFTs
-    normal_profile_dft: np.ndarray = np.fft.fft(normal_profile)
     x_relative: np.ndarray = np.linspace(
         -artifact.normal_length_pixels / 2,
         artifact.normal_length_pixels / 2,
         normal_profile.size,
     )
-    fig, [ax0, ax1, ax2] = plt.subplots(3)
-
-    ax0.plot(img_specs.ts, λ0_profile, label="Raw")
-    ax0.plot(img_specs.ts, λ0_profile_filtered, "r", label="Filtered")
-    ax0.set(
-        xlabel="time (s)",
-        ylabel=r"$\Delta$R/R",
-        title=f"Raw and filtered time profiles at λ0 ({artifact.λ0} nm)",
-        xlim=(img_specs.ts[0], img_specs.ts[-1]),
-    )
-    ax0.legend()
-    ax0.grid()
-
-    ax1.plot(x_relative, normal_profile, label="Raw")
-    ax1.plot(x_relative, normal_profile_filtered, "r", label="Filtered")
-    ax1.set(
+    axs[2].plot(x_relative, normal_profile, label="Raw")
+    axs[2].plot(x_relative, normal_profile_filtered, "r", label="Filtered")
+    axs[2].set(
         xlabel="n (pixels)",
         ylabel=r"$\Delta$R/R",
         title="Raw and filtered line profiles along the normal through the center of "
         "the artifact (bottom/left to top/right)",
     )
-    ax1.legend()
-    ax1.grid()
-    normal_profile_dft_filtered: np.ndarray = np.fft.fft(normal_profile_filtered)
-    f: np.ndarray = np.linspace(
-        0, artifact.normal_length_pixels / 2, normal_profile.size // 2
-    )
 
-    ax2.plot(f, np.log10(np.abs(normal_profile_dft))[: num // 2], label="Raw")
-    ax2.plot(
-        f,
-        np.log10(np.abs(normal_profile_dft_filtered))[: num // 2],
-        "r",
-        label="Filtered",
-    )
-    ax2.set(
-        title="DFTs of raw and filtered line profiles along the normal",
-        xlabel="k (samples)",
-        ylabel="log10(|DFT|)",
-    )
-    ax2.set_xlim(left=0)
-    ax2.legend()
-    ax2.grid()
+    # Plot legends & grids
+    for ax in axs:
+        ax.grid()
+        ax.legend(loc="upper left")
     plt.tight_layout()
 
-    # return start/and data coordinates (ps, nm) of line through center of artifact
+    # Return figure object for saving to file
     return fig
 
 
@@ -674,7 +689,6 @@ def transient_grating_artifact_filter(
     threshold_cutout: float,
     cross_width: int = 0,
     interpolate_image_to_power_of_two: bool = False,
-    filter_fill_ellipse: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
 
@@ -696,7 +710,6 @@ def transient_grating_artifact_filter(
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                                   nearest larger power of two
                                                   (default = False)
-        filter_fill_ellipse (bool): see Filter Class docstring (default = True)
 
     Returns: periodic image component (np.ndarray)
              smooth image component (np.ndarray)
@@ -795,7 +808,6 @@ def transient_grating_artifact_filter(
         img_dft_mag=periodic_dft_mag,
         threshold_ellipse=threshold_ellipse,
         threshold_cutout=threshold_cutout,
-        fill_ellipse=filter_fill_ellipse,
         img_specs=img_specs,
         artifact=artifact,
         cross_width=cross_width,
@@ -816,7 +828,7 @@ def transient_grating_artifact_filter(
     )
 
     # Plot line profile at λ0 and perpendicular to artifact though it's center (normal)
-    fig_normal: Figure = plot_λ0_and_normal_line_profiles(
+    fig_normal: Figure = plot_line_profiles(
         img=img,
         img_filtered=img_filtered,
         img_specs=img_specs,
@@ -878,6 +890,9 @@ def transient_grating_artifact_filter(
                 "artifact_extent_time_ps": artifact.extent_t,
                 "threshold_ellipse": threshold_ellipse,
                 "threshold_cutout": threshold_cutout,
+                "padding": flt.padding,
+                "cross_width": flt.cross_width,
+                "gaussian_blur": flt.gaussian_blur,
                 "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
                 "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
             },
@@ -886,6 +901,8 @@ def transient_grating_artifact_filter(
         with pd.ExcelWriter(
             Path("output") / f"{fname_path.stem}_filtering_results.xlsx"
         ) as writer:
+            df.iloc[0, 1:] = img_specs.λs
+            df.iloc[1:, 0] = img_specs.ts
             sheet_array: np.ndarray = df.iloc[:, :].to_numpy()
             write_excel_sheet(
                 sheet_array=sheet_array,
@@ -936,6 +953,9 @@ def transient_grating_artifact_filter(
                     "artifact_extent_time_ps": [artifact.extent_t],
                     "threshold_ellipse": [threshold_ellipse],
                     "threshold_cutout": [threshold_cutout],
+                    "padding": [flt.padding],
+                    "cross_width": [flt.cross_width],
+                    "gaussian_blur": [flt.gaussian_blur],
                     "filter_ellipse_long_axis_radius_pixels": [
                         flt.ellipse_long_axis_radius
                     ],

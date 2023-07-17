@@ -30,7 +30,7 @@ Function parameters:
 - *threshold_cutout*: threshold for filter central cutout identification ([0..1])
 
 Optional parameters:
-- *filter_fill_ellipse*: if False, draw the outline of the filter ellipse only for debugging purposes (default = True)
+- ...
 
 Output:
 - Files written to the *output* subdirectory

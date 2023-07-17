@@ -7,7 +7,7 @@ from transient_grating_artifact_filter import transient_grating_artifact_filter
 import sys
 
 # Structures to simulate: "gold_film", "nano_pillars", "rhodamine"
-substrate_type: str = "gold_film"
+substrate_type: str = "rhodamine"
 
 # Thresholds for filter construction
 threshold_ellipse: float = 0.1
@@ -15,9 +15,6 @@ threshold_cutout: float = 0.5
 
 # Cross width for filter construction
 cross_width: int = 0
-
-# Filter design & debugging: if False, draw ellipse outline only (debug, no filtering)
-filter_fill_ellipse: bool = True
 
 # Define simulation parameters for the selected structure
 if substrate_type == "gold_film":
@@ -53,7 +50,6 @@ transient_grating_artifact_filter(
     threshold_ellipse=threshold_ellipse,
     threshold_cutout=threshold_cutout,
     cross_width=cross_width,
-    filter_fill_ellipse=filter_fill_ellipse
 )
 
 # If running from the command line, pause for user input to keep figures visible.
