@@ -1073,7 +1073,7 @@ def transient_grating_artifact_filter(
     fig_images_and_dfts.savefig(
         Path("output") / f"{fname_path.stem}_images_and_dfts.png"
     )
-    fig_normal.savefig(Path("output") / f"{fname_path.stem}_normal.png")
+    fig_normal.savefig(Path("output") / f"{fname_path.stem}_line_profiles.png")
     if fname_path.suffix == ".mat":
         write_output_matlab_file(
             fname_path=fname_path,
