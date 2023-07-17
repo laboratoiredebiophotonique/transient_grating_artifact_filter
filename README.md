@@ -32,12 +32,12 @@ Function parameters:
 Optional parameters (filter fine tuning):
   - *padding* (float): extra padding for the filter ellipse relative the thresholded area 
                ([0..1], default is 0.2, i.e. +20%),
-  - *cross_width* (int) = width of a cross-shaped band cutout along the horizontal and
-                    vertical axes in the Fourier domain from the filter to pass (not filter)
+  - *cross_width* (int) = width of a cross-shaped pass-band cutout along the horizontal
+                    and vertical axes of the filter ellipse to pass (i.e. not filter)
                     any remaining non-periodic content left over from the
                     smooth/periodic decomposition (default is 0, i.e. no cross cutout),
   - *pass_upper_left_lower_right_quadrants* (bool): Pass (do not filter) upper left 
-                    and lower right quadrants of Fourier space (default = False)
+                    and lower right quadrants of Fourier space (default = False).
   - *gaussian_blur* (int) = gaussian blur kernel size applied to the fileter to reduce
                       ringing(default is 0 pixels),
 
