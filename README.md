@@ -1,4 +1,4 @@
-Transient gradient artifact filtering in the Fourier domain from 2D time-resolved spectroscopy map
+Transient gradient artifact filtering in the Fourier domain from 2D time-resolved spectroscopy map.
 
 First separate the input image (time-resolved spectroscopy map) into "smooth" and "periodic" components as per [Moisan, 2010] to
 reduce the effect of the "cross" pattern in the Discrete Fourier transform due to the
@@ -6,7 +6,8 @@ non-periodic nature of the image (see https://github.com/sbrisard/moisan2011), t
 filter the artifact from the periodic component in the Fourier domain using
 an ellipse with a cutout at the center to preserve the low-frequency content of the
 baseline data, and finally recombine the filtered periodic component with the smooth component
-to generate the filtered map. NB: the moisan2011 python package must be installed explicitly.
+to generate the filtered map, which is then lightly filtered using a Gaussian 3x3 kernel
+to remove any remaining high frequency noise. NB: the moisan2011 python package must be installed explicitly.
 
 Calling the script: *transient_grating_artifact_filter(fname, λ0_pump, artifact_extent_λ, artifact_extent_t, threshold_ellipse, threshold_cutout, filter_fill_ellipse)*
 
@@ -15,8 +16,8 @@ the results are written to the *output* subdirectory.
 
 Function parameters:
 
-- *fname* (str): input file in the *data* subdirectory containing the following arrays:
-  - *Data*: *nλ* x *nt* spectroscopy measurements (arbitrary units)
+- *fname* (str): input file in the *data* subdirectory containing the following data:
+  - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
   - *Wavelength*: *nλ* wavelength samples (nm)
   - *Time*: *nt* time samples (ps)
 
@@ -28,6 +29,7 @@ Function parameters:
 *Filter* class object parameters (see class definition for details):
 - *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
 - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
+- NB: *threshold_cutout* > *threshold_ellipse*
 
 Optional parameters (filter fine tuning):
   - *ellipse_padding* (float): extra padding for the filter ellipse relative the
@@ -36,7 +38,7 @@ Optional parameters (filter fine tuning):
                     horizontal and vertical axes of the filter ellipse to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
                     smooth/periodic decomposition (default is 0, i.e. no cross cutout).
-  - *pass_upper_left_lower_right_quadrants* (bool): Pass (do not filter) upper left 
+  - *pass_upper_left_lower_right_quadrants* (bool): if *True*, pass (do not filter) upper left 
                     and lower right quadrants of Fourier space (default = False).
 
 Output:

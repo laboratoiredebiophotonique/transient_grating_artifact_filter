@@ -30,19 +30,19 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.92"
+__version__: str = "2.93"
 
 
 @dataclass
 class ImageSpecs:
     """
-    Spectroscopy image specifications
+    Time-resolved spectroscopy data specifications
 
     λs_in (np.ndarray): input array of wavelengths (nm)
     ts_in (np.ndarray): input array of times (ps)
-    height (int): scaled image height (pixels)
-    width (int): scaled image width (pixels
-
+    img_in (np.ndarray): spectroscopy data (arbitrary units)
+    interpolate_image_to_power_of_two (bool): interpolate image dimensions to nearest
+                                              larger power of two (default: False)
     """
 
     λs_in: np.ndarray
@@ -96,7 +96,7 @@ class Artifact:
     λ0 (float): artifact center wavelength (pump center wavelength, nm)
     extent_λ (float): artifact extent along the wavelength axis (nm)
     extent_t (float): artifact extent along the time axis (ps)
-    img_specs (ImageSpecs): image specifications
+    img_specs (ImageSpecs): data specifications
 
     """
 
@@ -122,7 +122,7 @@ class Artifact:
             )
         )
 
-        # Equation and coordinate endpoints of line though center of the artifact
+        # Coordinate endpoints of line though center of the artifact
         slope: float = self.extent_t_pixels / self.extent_λ_pixels
         intercept: float = self.t0_pixels - slope * self.λ0_pixels
         self.x0_pixels: int = int(self.λ0_pixels - self.extent_λ_pixels // 2)
@@ -130,7 +130,7 @@ class Artifact:
         self.y0_pixels: int = int(slope * self.x0_pixels + intercept)
         self.y1_pixels: int = int(slope * self.x1_pixels + intercept)
 
-        # Equation and coordinate endpoints of normal through center of the artifact
+        # Coordinate endpoints of normal through center of the artifact
         self.normal_y0_pixels: int = self.y0_pixels
         self.normal_y1_pixels: int = self.y1_pixels
         normal_slope: float = (
@@ -148,7 +148,7 @@ class Artifact:
             + (self.normal_x0_pixels - self.normal_x1_pixels) ** 2
         )
 
-        # Convert pixel to data coordinates
+        # Convert pixel coordinates to data coordinates
         self.x0: float = self.img_specs.λs[self.x0_pixels]
         self.x1: float = self.img_specs.λs[self.x1_pixels]
         self.y0: float = self.img_specs.ts[self.img_specs.height - self.y0_pixels]
@@ -171,12 +171,12 @@ class Filter:
     img_dft_mag (np.ndarray): DFT magnitude image used to define the filter
     threshold_ellipse (float): threshold for defining the ellipse
     threshold_cutout (float): threshold for defining the cutout
-    img_specs (ImageSpecs): image specifications
+    img_specs (ImageSpecs): image data specifications
     artifact (Artifact): artifact specifications
     ellipse_padding (float) = extra padding around thresholded pixels for filter ellipse
-                             ([0..1], disabled if == 0)
-    cross_pass_band_width (int) = width of cross-shaped pass band along horizontal
-                                  and vertical axes in the Fourier domain, cutout from
+                              ([0..1], disabled if == 0)
+    cross_pass_band_width (int) = width of cross-shaped pass-band along horizontal
+                                  and vertical axes in the Fourier domain cutout from
                                   the filter to pass any remaining non-periodic
                                   content left over from the smooth/periodic
                                   decomposition (disabled if < 0)
@@ -198,6 +198,7 @@ class Filter:
     pass_upper_left_lower_right_quadrants: bool
 
     def __post_init__(self):
+        # Build the filter
         (
             self.ellipse_long_axis_radius,
             self.ellipse_short_axis_radius,
@@ -208,18 +209,18 @@ class Filter:
     @staticmethod
     def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
         """
-        Binarize image using a threshold
+        Binarize a log scale image using a threshold
 
         Args:
-            img (np.ndarray): image to be converted to binary
+            img (np.ndarray): log scale image to be converted to binary
             threshold (float): threshold [0, 1]
 
         Returns: binary image (np.ndarray)
 
         """
 
-        # Normalize image to [0, 1], limit to 4 decades of dynamic range, else small pixel
-        # values will skew the normalization since values are on a log scale.
+        # Normalize log scale image to [0, 1], limit to 4 decades of dynamic range else
+        # small pixel values will skew the normalization.
         img[img < np.amax(img) - 4] = np.amax(img) - 4
         img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
 
@@ -245,7 +246,7 @@ class Filter:
 
         Args:
             img_binary (np.ndarray): binary image to be analyzed
-            diagonal_pixel_coordinates (np.ndarray): array of pixel coordinates along diagonal
+            diagonal_pixel_coordinates (np.ndarray): array of diagonal pixel coordinates
 
         Returns: line length (float)
 
@@ -282,8 +283,8 @@ class Filter:
 
         """
 
-        # Determine ellipse long & short axis lengths (lengths of line along the artifact
-        # diagonal and normal to the diagonal)
+        # Determine ellipse long & short axis lengths (lengths of lines along the
+        # artifact diagonal and normal to the diagonal)
         img_binary_ellipse: np.ndarray = self.binarize_image(
             img=self.img_dft_mag, threshold=self.threshold_ellipse
         )
@@ -333,7 +334,7 @@ class Filter:
                 f"Threshold value for ellipse ({self.threshold_ellipse}) is too high!"
             )
 
-        # Build image of ellipse above-threshold pixels and resulting shape
+        # Build image of ellipse above-threshold pixels and resulting enclosing ellipse
         img_binary_ellipse_rgb = np.repeat(
             img_binary_ellipse[:, :, np.newaxis], 3, axis=2
         )
@@ -550,7 +551,7 @@ def plot_line_profiles(
 
 def plot_artifact_centerline(ax: Axes, img_specs: ImageSpecs, artifact: Artifact):
     """
-    Plot the centerline of the artifact.
+    Plot the centerline of the artifact with vertical & horizontal projections
 
     Args:
         ax (Axes): Axes object to plot on
@@ -601,7 +602,7 @@ def plot_images_and_dfts(
 ) -> Figure:
     """
 
-    Plot image & DFT pairs (original, periodic, smooth, periodic filtered, final)
+    Plot image & DFT pairs (raw, periodic, smooth, periodic filtered, final)
 
     Args:
         images (list): images
@@ -611,7 +612,7 @@ def plot_images_and_dfts(
         artifact (Artifact): artifact specifications
         flt (Filter): filter specifications
         fname (str): Input image filename
-        image_cmap (str): colormap for images
+        image_cmap (str): colormap for images (default = "seismic"
 
     Returns: matplotlib Figure class object
 
@@ -821,7 +822,7 @@ def write_output_matlab_file(
     img_filtered_final: np.ndarray,
 ):
     """
-    Write data to an Excel file
+    Write data to a Matlab file
 
     Args:
         fname_path (Path): Output filename
@@ -942,7 +943,7 @@ def transient_grating_artifact_filter(
             f"must be less than threshold_cutout ({threshold_cutout})!"
         )
 
-    # Load 2D spectroscopy measurement data from input file (Matlab, Excel, or .csv)
+    # Load time-resolved 2D spectroscopy measurement data from input file
     fname_path: Path = Path(f"{fname}")
     img_in: np.ndarray
     λs_in: np.ndarray
@@ -961,7 +962,7 @@ def transient_grating_artifact_filter(
     else:
         raise ValueError(f"Input file '{fname}' is not a Matlab, Excel, or .csv file!")
 
-    # Create ImageSpecs class object containing spectroscopy image data
+    # Create ImageSpecs class object containing time-resolved spectroscopy data
     img_specs: ImageSpecs = ImageSpecs(
         λs_in=λs_in,
         ts_in=ts_in,
@@ -1013,7 +1014,7 @@ def transient_grating_artifact_filter(
     img_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered)
     img_filtered_final_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered_final)
 
-    # Plot line profile vertically at λ0, horizontally at vertical (time) mid-point,
+    # Plot line profiles vertically at λ0, horizontally at vertical (time) mid-point,
     # and perpendicular to the artifact though it's center (normal),
     fig_normal: Figure = plot_line_profiles(
         img=img_specs.img,
@@ -1022,7 +1023,7 @@ def transient_grating_artifact_filter(
         artifact=artifact,
     )
 
-    # Plot the image & DFT pairs (original, periodic, smooth, filtered u, filtered u)
+    # Display the image & DFT pairs (original, periodic, smooth, filtered u, filtered u)
     fig_images_and_dfts: Figure = plot_images_and_dfts(
         images=[
             img_specs.img,

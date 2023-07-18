@@ -1,6 +1,6 @@
 """transient_grating_artifact_filter_exec.py
 
-test script to call transient.grating_artifact_filter.oy
+Test script to call transient.grating_artifact_filter.oy
 
 """
 from transient_grating_artifact_filter import transient_grating_artifact_filter
