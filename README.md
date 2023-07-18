@@ -1,9 +1,9 @@
 Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map.
 
-- First separate the input image (time-resolved spectroscopy map) into "smooth" and
-"periodic" components as per [Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)
-to reduce the effect of the "cross" pattern in the Discrete Fourier transform due to the
-- non-periodic nature of the image.
+- Separate the input image (time-resolved spectroscopy map) into "smooth" and
+"periodic" components as per [[Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)]
+to reduce the effect of the "cross" pattern at the center of the Discrete Fourier transform due to the 
+non-periodic nature of the image.
 
 - Filter the artifact from the periodic component in the Fourier domain using
 an ellipse with a pass-band cutout at the center to preserve the low-frequency content of the
@@ -11,7 +11,7 @@ baseline data. Additional pass-band areas can be added to fine-tune the filterin
 (see *Optional parameters* below).
 
 - Recombine the filtered periodic component with the smooth component
-to generate the filtered map.
+to generate the filtered image.
 
 - A light gaussian filtering using a 3x3 kernel (blurring) is applied to the filtered result
 to remove any remaining high frequency noise.
@@ -44,8 +44,6 @@ Function parameters:
   - NB: *threshold_cutout* > *threshold_ellipse*
 
 Optional parameters (filter fine tuning):
-  - *ellipse_padding* (float): extra padding for the filter ellipse relative the
-                               thresholded area  ([0..1], default is 0.2, i.e. +20%).
   - *cross_pass_band_width* (int) = width of a cross-shaped pass-band cutout along the
                     horizontal and vertical axes of the filter ellipse to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
