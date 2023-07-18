@@ -42,7 +42,7 @@ elif substrate_type == "nano_pillars":
 elif substrate_type == "rhodamine":
     # Rhodamine solution
     fname = "Data_Rhodamine_570_2.mat"
-    λ0_pump = 570.0
+    λ0_pump = 568.0
     artifact_extent_λ = 22
     artifact_extent_t = 0.55
 
