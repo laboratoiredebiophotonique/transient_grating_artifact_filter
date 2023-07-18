@@ -64,7 +64,6 @@ transient_grating_artifact_filter(
     λ_time_profile=λ_time_profile,
     cross_pass_band_width=cross_pass_band_width,
     pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
-    interpolate_image_to_power_of_two=True,
 )
 
 # If running from the command line, pause for user input to keep figures visible.
