@@ -1,6 +1,6 @@
 """transient_grating_artifact_filter_exec.py
 
-Test script to call transient.grating_artifact_filter.oy
+Test script to call transient.grating_artifact_filter.py
 
 """
 from transient_grating_artifact_filter import transient_grating_artifact_filter
@@ -13,12 +13,12 @@ substrate_type: str = "rhodamine"
 threshold_ellipse: float = 0.1
 threshold_cutout: float = 0.5
 
-# Wavelength at which the time line profile is plotted (if 0, default to λ0)
-λ_time_profile: float = 0
-
 # transient_grating_artifact_filter() optional parameters
 cross_pass_band_width: int = 0
 pass_upper_left_lower_right_quadrants: bool = True
+
+# Wavelength at which the time line profile is plotted (if 0, default to λ0)
+λ_time_profile: float = 0
 
 # Define simulation parameters for the selected structure
 if substrate_type == "croix":
@@ -48,7 +48,7 @@ elif substrate_type == "rhodamine":
     λ0_pump = 570.0
     artifact_extent_λ = 22
     artifact_extent_t = 0.55
-    λ_time_profile: float = 568.0
+    λ_time_profile: float = 566.74
 
 else:
     raise ValueError("Unknown substrate type!")

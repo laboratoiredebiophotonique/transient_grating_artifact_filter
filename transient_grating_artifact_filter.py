@@ -22,15 +22,17 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from moisan2011 import per
+import os
 from pathlib import Path
 from scipy import ndimage
 from scipy.io import loadmat, savemat
 from scipy.interpolate import RegularGridInterpolator
 from skimage.draw import line
+import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "2.98"
+__version__: str = "2.99"
 
 
 @dataclass
@@ -560,7 +562,7 @@ def plot_line_profiles(
     # Plot legends & grids
     for ax in axs:
         ax.grid()
-        ax.legend(loc="upper left")
+        ax.legend(loc="lower right")
     plt.tight_layout()
 
     # Return figure object for saving to file
@@ -937,6 +939,16 @@ def transient_grating_artifact_filter(
              binary filter image (np.ndarray)
 
     """
+
+    # Show script name & version and python interpreter version on console
+    python_version = (
+        f"{str(sys.version_info.major)}"
+        f".{str(sys.version_info.minor)}"
+        f".{str(sys.version_info.micro)}"
+    )
+    print(
+        f"{os.path.basename(__file__)} v{__version__} (running Python {python_version})"
+    )
 
     # matplotlib initializations
     plt.rcParams.update(
