@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.95"
+__version__: str = "2.97"
 
 
 @dataclass
@@ -184,8 +184,6 @@ class Filter:
     threshold_cutout (float): threshold for defining the cutout
     img_specs (ImageSpecs): image data specifications
     artifact (Artifact): artifact specifications
-    ellipse_padding (float) = extra padding around thresholded pixels for filter ellipse
-                              ([0..1], disabled if == 0)
     cross_pass_band_width (int) = width of cross-shaped pass-band along horizontal
                               and vertical axes in the Fourier domain cutout from
                               the filter to pass any remaining non-periodic
@@ -203,7 +201,6 @@ class Filter:
     threshold_cutout: float
     img_specs: ImageSpecs
     artifact: Artifact
-    ellipse_padding: float
     cross_pass_band_width: int
     pass_upper_left_lower_right_quadrants: bool
 
@@ -322,7 +319,6 @@ class Filter:
                     img_binary=img_binary_ellipse,
                     diagonal_pixel_coordinates=artifact_long_diagonal_pixel_coordinates,
                 )
-                * (1.0 + self.ellipse_padding)
             )
             // 2
         )
@@ -332,7 +328,6 @@ class Filter:
                     img_binary=img_binary_ellipse,
                     diagonal_pixel_coordinates=artifact_short_diagonal_pixel_coordinates,
                 )
-                * (1.0 + self.ellipse_padding)
             )
             // 2
         )
@@ -449,7 +444,6 @@ class Filter:
             f"{self.threshold_ellipse:.2f}, "
             f"long axis radius = {self.ellipse_long_axis_radius} pixels, "
             f"short axis radius = {self.ellipse_short_axis_radius} pixels"
-            f" ({self.ellipse_padding * 100:.0f}% ellipse padding)"
         )
         axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
 
@@ -802,7 +796,6 @@ def write_output_excel_file(
                 "artifact_extent_time_ps": [artifact.extent_t],
                 "threshold_ellipse": [flt.threshold_ellipse],
                 "threshold_cutout": [flt.threshold_cutout],
-                "ellipse_padding": [flt.ellipse_padding],
                 "cross_pass_band_width": [flt.cross_pass_band_width],
                 "filter_ellipse_long_axis_radius_pixels": [
                     flt.ellipse_long_axis_radius
@@ -863,7 +856,6 @@ def write_output_matlab_file(
             "artifact_extent_time_ps": artifact.extent_t,
             "threshold_ellipse": flt.threshold_ellipse,
             "threshold_cutout": flt.threshold_cutout,
-            "ellipse_padding": flt.ellipse_padding,
             "cross_pass_band_width": flt.cross_pass_band_width,
             "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
             "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
@@ -892,9 +884,8 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
-    ellipse_padding=0.20,
-    cross_pass_band_width=0,
-    pass_upper_left_lower_right_quadrants=False,
+    cross_pass_band_width: int = 0,
+    pass_upper_left_lower_right_quadrants: bool = True,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -913,8 +904,6 @@ def transient_grating_artifact_filter(
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
-        ellipse_padding (float): padding for filter ellipse size
-                                 (default = 0.20, i.e. +20%)
         cross_pass_band_width (int): width of cross cutout in filter (default = 0)
         pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
                                               quadrants of the filter (default = False)
@@ -947,12 +936,11 @@ def transient_grating_artifact_filter(
     if (
         (threshold_ellipse < 0 or threshold_ellipse > 1)
         or (threshold_cutout < 0 or threshold_cutout > 1)
-        or (ellipse_padding < 0 or ellipse_padding > 1)
         or cross_pass_band_width < 0
     ):
         raise ValueError(
             "One or more of the values supplied for the parameters threshold_ellipse, "
-            "threshold_cutout, ellipse_padding, or cross_pass_band_width are "
+            "threshold_cutout, or cross_pass_band_width are "
             "out of range!"
         )
     if threshold_ellipse > threshold_cutout:
@@ -1013,7 +1001,6 @@ def transient_grating_artifact_filter(
         threshold_cutout=threshold_cutout,
         img_specs=img_specs,
         artifact=artifact,
-        ellipse_padding=ellipse_padding,
         cross_pass_band_width=cross_pass_band_width,
         pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
     )

@@ -44,12 +44,13 @@ Function parameters:
   - NB: *threshold_cutout* > *threshold_ellipse*
 
 Optional parameters (filter fine tuning):
-  - *cross_pass_band_width* (int) = width of a cross-shaped pass-band cutout along the
-                    horizontal and vertical axes of the filter ellipse to pass
+  - *cross_pass_band_width* (int) = width of a cross-shaped pass-band in the filter along the
+                    horizontal and vertical axes of the Fourier plane to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
-                    smooth/periodic decomposition (default is 0, i.e. no cross cutout).
-  - *pass_upper_left_lower_right_quadrants* (bool): if *True*, pass (do not filter) upper left 
-                    and lower right quadrants of Fourier space (default = False).
+                    smooth/periodic decomposition (default = 0, i.e. no cross pass-band).
+  - *pass_upper_left_lower_right_quadrants* (bool): enable/disable filter pass-band
+                    areas for upper-left and lower-right quadrants of the Fourier plane
+                    (default = True, i.e. pass upper-left and lower-right quadrants).
 
 Output:
 - Files written to the *output* subdirectory
