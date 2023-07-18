@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.97"
+__version__: str = "2.98"
 
 
 @dataclass
@@ -473,16 +473,20 @@ def plot_line_profiles(
     img_filtered: np.ndarray,
     img_specs: ImageSpecs,
     artifact: Artifact,
+    λ_time_profile: float,
 ) -> Figure:
     """
-    Plot line profiles vertically at λ0, horizontally at mid-point,
-    and along the normal to the artifact.
+    Plot line profiles vertically (time) at wavelength lambda_time_profile,
+    horizontally (wavelength) at time mid-point, and perpendicular to the artifact
+    though it's center (normal),
 
     Args:
         img (np.ndarray): original image
         img_filtered (np.ndarray): filtered image
         img_specs (ImageSpecs): image parameters
         artifact (Artifact): artifact parameters
+        λ_time_profile (float): wavelength for vertical (time) line profile,
+                                if 0, default to artifact.λ0
 
     Returns: Figure object
 
@@ -491,19 +495,32 @@ def plot_line_profiles(
     # Define figure and axes
     fig, axs = plt.subplots(3)
 
-    # Raw and filtered vertical line profiles at λ0
-    λ0_profile: np.ndarray = np.flip(img[:, artifact.λ0_pixels])
-    λ0_profile_filtered: np.ndarray = np.flip(img_filtered[:, artifact.λ0_pixels])
+    # Determine array index of lambda_time_profile
+    if λ_time_profile == 0:
+        λ_time_profile_pixels: int = artifact.λ0_pixels
+    elif λ_time_profile < img_specs.λ0 or λ_time_profile > img_specs.λ1:
+        raise ValueError(
+            f"λ_time_profile ({λ_time_profile}) must be between "
+            f"λ0 ({img_specs.λ0:.2f}) and λ1 ({img_specs.λ1:.2f})!"
+        )
+    else:
+        λ_time_profile_pixels: int = np.abs(img_specs.λs - λ_time_profile).argmin()
+
+    # Raw and filtered vertical (time) line profiles at λ0
+    λ0_profile: np.ndarray = np.flip(img[:, λ_time_profile_pixels])
+    λ0_profile_filtered: np.ndarray = np.flip(img_filtered[:, λ_time_profile_pixels])
     axs[0].plot(img_specs.ts, λ0_profile, label="Raw")
     axs[0].plot(img_specs.ts, λ0_profile_filtered, "r", label="Filtered")
     axs[0].set(
         xlabel="time (s)",
         ylabel=r"$\Delta$R/R",
-        title=f"Raw and filtered vertical line profiles at λ0 ({artifact.λ0:.2f} nm)",
+        title=f"Raw and filtered vertical (time) line profiles at "
+        f"{λ_time_profile if λ_time_profile != 0 else artifact.λ0:.2f} nm "
+        f"(λ0 = {artifact.λ0:.2f} nm)",
         xlim=(img_specs.ts[0], img_specs.ts[-1]),
     )
 
-    # Raw and filtered horizontal line profiles at vertical midpoint
+    # Raw and filtered horizontal (wavelength) line profiles at vertical midpoint
     mid_horizontal_profile: np.ndarray = img[img.shape[0] // 2, :]
     mid_horizontal_profile_filtered: np.ndarray = img_filtered[img.shape[0] // 2, :]
     axs[1].plot(img_specs.λs, mid_horizontal_profile, label="Raw")
@@ -511,8 +528,8 @@ def plot_line_profiles(
     axs[1].set(
         xlabel="λ (pm)",
         ylabel=r"$\Delta$R/R",
-        title=f"Raw and filtered horizontal line profiles at vertical midpoint "
-        f"({img_specs.ts[img.shape[0] // 2]:.2f} ps)",
+        title=f"Raw and filtered horizontal (wavelength) line profiles at vertical "
+        f"midpoint ({img_specs.ts[img.shape[0] // 2]:.2f} ps)",
     )
 
     # Raw and filtered line profiles along the normal to the artifact
@@ -884,6 +901,7 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
+    λ_time_profile: float = 0,
     cross_pass_band_width: int = 0,
     pass_upper_left_lower_right_quadrants: bool = True,
     interpolate_image_to_power_of_two: bool = False,
@@ -904,6 +922,7 @@ def transient_grating_artifact_filter(
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
+        λ_time_profile (float): Wavelength at which the time profile is plotted
         cross_pass_band_width (int): width of cross cutout in filter (default = 0)
         pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
                                               quadrants of the filter (default = False)
@@ -1019,13 +1038,13 @@ def transient_grating_artifact_filter(
     img_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered)
     img_filtered_final_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered_final)
 
-    # Plot line profiles vertically at λ0, horizontally at vertical (time) mid-point,
-    # and perpendicular to the artifact though it's center (normal),
+    # Plot line profiles in time, wavelength, and normal to the artifact
     fig_normal: Figure = plot_line_profiles(
         img=img_specs.img,
         img_filtered=img_filtered_final,
         img_specs=img_specs,
         artifact=artifact,
+        λ_time_profile=λ_time_profile,
     )
 
     # Display the image & DFT pairs (original, periodic, smooth, filtered u, filtered u)

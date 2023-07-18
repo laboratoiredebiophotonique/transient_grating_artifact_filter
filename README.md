@@ -43,7 +43,9 @@ Function parameters:
   - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
   - NB: *threshold_cutout* > *threshold_ellipse*
 
-Optional parameters (filter fine tuning):
+Optional parameters:
+  - *λ_time_profile* (float): Wavelength at which the time line profile is 
+                    plotted (nm, if 0 default to *λ0*).
   - *cross_pass_band_width* (int) = width of a cross-shaped pass-band in the filter along the
                     horizontal and vertical axes of the Fourier plane to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
