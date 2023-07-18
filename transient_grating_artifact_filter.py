@@ -9,7 +9,7 @@ in the Discrete Fourier transform due to the non-periodic nature of the image
 (see https://github.com/sbrisard/moisan2011), then filter the artifact from the periodic
 component in the Fourier domain using an ellipse with a cutout at the center
 to preserve the low-frequency content of the baseline data, and finally recombine
-the filtered periodic component with the smooth component o generate the filtered map.
+the filtered periodic component with the smooth component to generate the filtered map.
 
 """
 
@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.93"
+__version__: str = "2.94"
 
 
 @dataclass
@@ -61,7 +61,8 @@ class ImageSpecs:
                 "(mismatch between Data vs Wavelength and/or Time array dimensions)!"
             )
 
-        # Interpolate image dimensions to nearest larger power of two, if requested
+        # Set image dimensions to nearest larger power of 2 for interpolation, if
+        # requested, else use input image dimensions
         if self.interpolate_image_to_power_of_two:
             self.height, self.width = int(
                 2 ** np.ceil(np.log2(self.img_in.shape[0]))
@@ -106,6 +107,16 @@ class Artifact:
     img_specs: ImageSpecs
 
     def __post_init__(self):
+        # Check artifact specifications against image dimensions
+        if (
+            (self.λ0 < self.img_specs.λ0 or self.λ0 > self.img_specs.λ1)
+            or (self.extent_λ > (self.img_specs.λ1 - self.img_specs.λ0))
+            or (self.extent_t > (self.img_specs.t1 - self.img_specs.t0))
+        ):
+            raise ValueError(
+                "Artifact specs are out of range for the input image dimensions!"
+            )
+
         # Artifact geometry in units of pixels
         self.λ0_pixels: int = np.abs(self.img_specs.λs - self.λ0).argmin()
         self.t0_pixels: int = (
@@ -629,8 +640,8 @@ def plot_images_and_dfts(
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
         f"extent λ = {artifact.extent_λ:.1f} nm, "
         f"extent t = {artifact.extent_t:.2f} ps\n"
-        "Top row: images\n"
-        "Bottom row: DFT amplitudes (2X zoom, 5 decade dynamic range)"
+        "Top row: images, "
+        "bottom row: DFT amplitudes (2X zoom, 5 decade dynamic range)\n"
     )
     dft_x_max: float = 1 / (img_specs.dλ * 2)
     dft_y_max: float = 1 / (img_specs.dt * 2)
@@ -936,7 +947,18 @@ def transient_grating_artifact_filter(
     )
     plt.ion()
 
-    # Check input parameters
+    # Check input filtering parameters
+    if (
+        threshold_ellipse not in range(1)
+        or threshold_cutout not in range(1)
+        or ellipse_padding not in range(1)
+        or cross_pass_band_width < 0
+    ):
+        raise ValueError(
+            "One or more of the values supplied for the parameters threshold_ellipse, "
+            "threshold_cutout, ellipse_padding, or cross_pass_band_width are "
+            "out of range!"
+        )
     if threshold_ellipse > threshold_cutout:
         raise ValueError(
             f"threshold_ellipse ({threshold_ellipse})"
@@ -1044,12 +1066,12 @@ def transient_grating_artifact_filter(
             img_dft_mag - img_filtered_dft_mag,
         ],
         titles=[
-            "Original image\nu = s + u",
-            "Periodic component\nu",
-            "Smooth component\ns",
-            "Filt. periodic comp.\nuf",
-            "Filt. image\nuf = s + uf",
-            "Filt. image + 3x3 gaussian\nBlur(uf)",
+            "\nRaw image\nu = s + u",
+            "\nPeriodic\ncomponent\nu",
+            "\nSmooth\ncomponent\ns",
+            "Filtered periodic\ncomponent\nuf",
+            "Filtered image\nuf = s + uf",
+            "Filtered image\n with 3x3 gaussian\nBlur(uf)",
             "Artifact\nu - uf",
         ],
         img_specs=img_specs,

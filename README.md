@@ -1,15 +1,27 @@
-Transient gradient artifact filtering in the Fourier domain from 2D time-resolved spectroscopy map.
+Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map.
 
-First separate the input image (time-resolved spectroscopy map) into "smooth" and "periodic" components as per [Moisan, 2010] to
-reduce the effect of the "cross" pattern in the Discrete Fourier transform due to the
-non-periodic nature of the image (see https://github.com/sbrisard/moisan2011), then
-filter the artifact from the periodic component in the Fourier domain using
-an ellipse with a cutout at the center to preserve the low-frequency content of the
-baseline data, and finally recombine the filtered periodic component with the smooth component
-to generate the filtered map, which is then lightly filtered using a Gaussian 3x3 kernel
-to remove any remaining high frequency noise. NB: the moisan2011 python package must be installed explicitly.
+- First separate the input image (time-resolved spectroscopy map) into "smooth" and
+"periodic" components as per [Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)
+to reduce the effect of the "cross" pattern in the Discrete Fourier transform due to the
+- non-periodic nature of the image.
 
-Calling the script: *transient_grating_artifact_filter(fname, λ0_pump, artifact_extent_λ, artifact_extent_t, threshold_ellipse, threshold_cutout, filter_fill_ellipse)*
+- Filter the artifact from the periodic component in the Fourier domain using
+an ellipse with a pass-band cutout at the center to preserve the low-frequency content of the
+baseline data. Additional pass-band areas can be added to fine-tune the filtering
+(see *Optional parameters* below).
+
+- Recombine the filtered periodic component with the smooth component
+to generate the filtered map.
+
+- A light gaussian filtering using a 3x3 kernel (blurring) is applied to the filtered result
+to remove any remaining high frequency noise.
+
+- The script can accommodate non-uniformly sampled data in time and/or wavelength.
+
+- The moisan2011 python package must be installed explicitly from [GitHub](https://github.com/sbrisard/moisan2011).
+
+Calling the script: *transient_grating_artifact_filter(fname, λ0_pump, artifact_extent_λ,
+artifact_extent_t, threshold_ellipse, threshold_cutout, filter_fill_ellipse)*
 
 The data are read from a Matlab, Excel, or .csv format file from the *data* subdirectory,
 the results are written to the *output* subdirectory.
@@ -21,15 +33,15 @@ Function parameters:
   - *Wavelength*: *nλ* wavelength samples (nm)
   - *Time*: *nt* time samples (ps)
 
-*Artifact* class object parameters (see class definition for details):
-- *λ0* (float): pump central wavelength (nm)
-- *extent_t* (float): artifact extent in time (ps)
-- *extent_λ* (float): artifact extent in wavelength (nm)
+- *Artifact* class object parameters (see class definition for details):
+  - *λ0* (float): pump central wavelength (nm)
+  - *extent_t* (float): artifact extent in time (ps)
+  - *extent_λ* (float): artifact extent in wavelength (nm)
 
-*Filter* class object parameters (see class definition for details):
-- *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
-- *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
-- NB: *threshold_cutout* > *threshold_ellipse*
+- *Filter* class object parameters (see class definition for details):
+  - *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
+  - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
+  - NB: *threshold_cutout* > *threshold_ellipse*
 
 Optional parameters (filter fine tuning):
   - *ellipse_padding* (float): extra padding for the filter ellipse relative the
