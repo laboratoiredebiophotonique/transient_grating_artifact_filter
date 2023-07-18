@@ -17,7 +17,7 @@ threshold_cutout: float = 0.5
 cross_pass_band_width: int = 0
 pass_upper_left_lower_right_quadrants: bool = True
 
-# Wavelength at which the time line profile is plotted (if 0, default to λ0)
+# Wavelength at which the time line-profile is plotted (if 0, default to λ0)
 λ_time_profile: float = 0
 
 # Define simulation parameters for the selected structure
