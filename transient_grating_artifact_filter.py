@@ -30,7 +30,7 @@ from skimage.draw import line
 from typing import Tuple
 
 # Script version
-__version__: str = "2.94"
+__version__: str = "2.95"
 
 
 @dataclass
@@ -64,9 +64,9 @@ class ImageSpecs:
         # Set image dimensions to nearest larger power of 2 for interpolation, if
         # requested, else use input image dimensions
         if self.interpolate_image_to_power_of_two:
-            self.height, self.width = int(
-                2 ** np.ceil(np.log2(self.img_in.shape[0]))
-            ), int(2 ** np.ceil(np.log2(self.img_in.shape[1])))
+            self.height, self.width = 2 ** np.ceil(
+                np.log2(self.img_in.shape[0])
+            ).astype(int), 2 ** np.ceil(np.log2(self.img_in.shape[1])).astype(int)
         else:
             self.height, self.width = self.img_in.shape
 
@@ -187,15 +187,14 @@ class Filter:
     ellipse_padding (float) = extra padding around thresholded pixels for filter ellipse
                               ([0..1], disabled if == 0)
     cross_pass_band_width (int) = width of cross-shaped pass-band along horizontal
-                                  and vertical axes in the Fourier domain cutout from
-                                  the filter to pass any remaining non-periodic
-                                  content left over from the smooth/periodic
-                                  decomposition (disabled if < 0)
+                              and vertical axes in the Fourier domain cutout from
+                              the filter to pass any remaining non-periodic
+                              content left over from the smooth/periodic
+                              decomposition (disabled if < 0)
     pass_upper_left_lower_right_quadrants (bool) = pass (do not filter) the upper-left
-                                                   and lower-right quadrants of Fourier
-                                                   space, excluding the horizontal and
-                                                   vertical axes that can be passed with
-                                                   cross_pass_band_width > 0
+                              and lower-right quadrants of Fourier space, excluding
+                              the horizontal and vertical axes that can be passed with
+                              cross_pass_band_width > 0
 
     """
 
@@ -235,18 +234,15 @@ class Filter:
         img[img < np.amax(img) - 4] = np.amax(img) - 4
         img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
 
-        # Binarize image with threshold, clean up with morphological opening and closing
+        # Binarize image with threshold
         img_binary: np.ndarray = cv.threshold(
             img_normalized, threshold, 1, cv.THRESH_BINARY
         )[1]
-        img_binary_open: np.ndarray = cv.morphologyEx(
-            img_binary, cv.MORPH_OPEN, np.ones((3, 3), np.uint8)
-        )
-        img_binary_final: np.ndarray = cv.morphologyEx(
-            img_binary_open, cv.MORPH_CLOSE, np.ones((3, 3), np.uint8)
-        )
 
-        return img_binary_final
+        # Clean up with morphological opening (erosion/dilation), dilate a bit more to
+        # round out and slightly increase the thresholded area
+        erosion = cv.erode(img_binary, np.ones((3, 3), np.uint8))
+        return cv.dilate(erosion, np.ones((5, 5), np.uint8))
 
     @staticmethod
     def calc_line_length(
@@ -949,9 +945,9 @@ def transient_grating_artifact_filter(
 
     # Check input filtering parameters
     if (
-        threshold_ellipse not in range(1)
-        or threshold_cutout not in range(1)
-        or ellipse_padding not in range(1)
+        (threshold_ellipse < 0 or threshold_ellipse > 1)
+        or (threshold_cutout < 0 or threshold_cutout > 1)
+        or (ellipse_padding < 0 or ellipse_padding > 1)
         or cross_pass_band_width < 0
     ):
         raise ValueError(
