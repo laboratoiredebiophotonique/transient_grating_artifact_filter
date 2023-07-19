@@ -3,8 +3,22 @@
 Test script to call transient.grating_artifact_filter.py
 
 """
+import matplotlib.pyplot as plt
 from transient_grating_artifact_filter import transient_grating_artifact_filter
 import sys
+
+# matplotlib initializations
+plt.rcParams.update(
+    {
+        "figure.dpi": 200,
+        "figure.figsize": [10, 5],
+        "font.size": 6,
+        "lines.linewidth": 0.5,
+        "axes.linewidth": 0.5,
+        "image.cmap": "coolwarm",
+    },
+)
+plt.ion()
 
 # Structures to simulate: "croix", "gold_film", "nano_pillars", "rhodamine"
 substrate_type: str = "rhodamine"
@@ -17,7 +31,7 @@ threshold_cutout: float = 0.5
 cross_pass_band_width: int = 0
 pass_upper_left_lower_right_quadrants: bool = True
 
-# Wavelength at which the time line-profile is plotted (if 0, default to λ0)
+# Wavelength at which the time line-profile is plotted (if 0, default to λ0_pump)
 λ_time_profile: float = 0
 
 # Define simulation parameters for the selected structure

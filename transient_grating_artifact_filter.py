@@ -32,7 +32,7 @@ import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "2.99"
+__version__: str = "3"
 
 
 @dataclass
@@ -207,6 +207,23 @@ class Filter:
     pass_upper_left_lower_right_quadrants: bool
 
     def __post_init__(self):
+        # Check input parameters
+        if (
+            (self.threshold_ellipse < 0 or self.threshold_ellipse > 1)
+            or (self.threshold_cutout < 0 or self.threshold_cutout > 1)
+            or self.cross_pass_band_width < 0
+        ):
+            raise ValueError(
+                "One or more of the values supplied for the parameters threshold_ellipse, "
+                "threshold_cutout, or cross_pass_band_width are "
+                "out of range!"
+            )
+        if self.threshold_ellipse > self.threshold_cutout:
+            raise ValueError(
+                f"threshold_ellipse ({self.threshold_ellipse})"
+                f"must be less than threshold_cutout ({self.threshold_cutout})!"
+            )
+
         # Build the filter
         (
             self.ellipse_long_axis_radius,
@@ -699,8 +716,7 @@ def plot_images_and_dfts(
         if bot_ax == bot_axes[0]:
             bot_ax.set(ylabel=r"|X(y)| (ps$^{-1}$)")
 
-    # Show plots, return Figure class object
-    plt.show()
+    # Return Figure class object
     return fig
 
 
@@ -907,7 +923,7 @@ def transient_grating_artifact_filter(
     cross_pass_band_width: int = 0,
     pass_upper_left_lower_right_quadrants: bool = True,
     interpolate_image_to_power_of_two: bool = False,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
 
     Separate an image into smooth and periodic components as per [Moisan, 2010], filter
@@ -932,7 +948,8 @@ def transient_grating_artifact_filter(
                                                   nearest larger power of two
                                                   (default = False)
 
-    Returns: periodic image component (np.ndarray)
+    Returns: re-sampled raw image (np.ndarray)
+             periodic image component (np.ndarray)
              smooth image component (np.ndarray)
              filtered image (np.ndarray)
              filtered periodic component (np.ndarray)
@@ -950,37 +967,7 @@ def transient_grating_artifact_filter(
         f"{os.path.basename(__file__)} v{__version__} (running Python {python_version})"
     )
 
-    # matplotlib initializations
-    plt.rcParams.update(
-        {
-            "figure.dpi": 200,
-            "figure.figsize": [10, 5],
-            "font.size": 6,
-            "lines.linewidth": 0.5,
-            "axes.linewidth": 0.5,
-            "image.cmap": "coolwarm",
-        },
-    )
-    plt.ion()
-
-    # Check input filtering parameters
-    if (
-        (threshold_ellipse < 0 or threshold_ellipse > 1)
-        or (threshold_cutout < 0 or threshold_cutout > 1)
-        or cross_pass_band_width < 0
-    ):
-        raise ValueError(
-            "One or more of the values supplied for the parameters threshold_ellipse, "
-            "threshold_cutout, or cross_pass_band_width are "
-            "out of range!"
-        )
-    if threshold_ellipse > threshold_cutout:
-        raise ValueError(
-            f"threshold_ellipse ({threshold_ellipse})"
-            f"must be less than threshold_cutout ({threshold_cutout})!"
-        )
-
-    # Load time-resolved 2D spectroscopy measurement data from input file
+    # Load time-resolved 2D spectroscopy data from the input file
     fname_path: Path = Path(f"{fname}")
     img_in: np.ndarray
     λs_in: np.ndarray
@@ -999,7 +986,9 @@ def transient_grating_artifact_filter(
     else:
         raise ValueError(f"Input file '{fname}' is not a Matlab, Excel, or .csv file!")
 
-    # Create ImageSpecs class object containing time-resolved spectroscopy data
+    # Create ImageSpecs class object containing time-resolved spectroscopy data,
+    # interpolate the data on a regular grid to account for any inhomogeneous
+    # time and/or wavelength sampling
     img_specs: ImageSpecs = ImageSpecs(
         λs_in=λs_in,
         ts_in=ts_in,
@@ -1016,7 +1005,7 @@ def transient_grating_artifact_filter(
     )
 
     # Extract periodic and smooth component DFTs from the input image ([Moisan, 2010]),
-    # calculate the corresponding component images from their inverse DFTs
+    # then calculate the corresponding component images from their inverse DFTs
     periodic_dft, smooth_dft = per(img_specs.img, inverse_dft=False)
     periodic_dft_mag, smooth_dft_mag = np.log10(
         np.abs(np.fft.fftshift(periodic_dft)) + 1e-10
@@ -1041,25 +1030,25 @@ def transient_grating_artifact_filter(
     periodic_filtered: np.ndarray = np.real(np.fft.ifft2(periodic_filtered_dft))
     img_filtered: np.ndarray = smooth + periodic_filtered
 
-    # Light 3x3 Gaussian filtering of the output image to remove high frequency noise
-    img_filtered_final: np.ndarray = ndimage.gaussian_filter(img_filtered, 3)
+    # Light 3x3 Gaussian blur of the output image to remove high frequency noise
+    img_filtered_blur: np.ndarray = ndimage.gaussian_filter(img_filtered, 3)
 
-    # Calculate various required DFT log magnitude images
+    # Calculate various required DFT magnitude images for plotting and saving
     img_dft_mag: np.ndarray = calc_dft_log_magnitude(img_specs.img)
     periodic_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(periodic_filtered)
     img_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered)
-    img_filtered_final_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered_final)
+    img_filtered_final_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered_blur)
 
     # Plot line profiles in time, wavelength, and normal to the artifact
     fig_normal: Figure = plot_line_profiles(
         img=img_specs.img,
-        img_filtered=img_filtered_final,
+        img_filtered=img_filtered_blur,
         img_specs=img_specs,
         artifact=artifact,
         λ_time_profile=λ_time_profile,
     )
 
-    # Display the image & DFT pairs (original, periodic, smooth, filtered u, filtered u)
+    # Display the various image & DFT pairs
     fig_images_and_dfts: Figure = plot_images_and_dfts(
         images=[
             img_specs.img,
@@ -1067,7 +1056,7 @@ def transient_grating_artifact_filter(
             smooth,
             periodic_filtered,
             img_filtered,
-            img_filtered_final,
+            img_filtered_blur,
             img_specs.img - img_filtered,
         ],
         dfts=[
@@ -1093,7 +1082,6 @@ def transient_grating_artifact_filter(
         flt=flt,
         fname=fname,
     )
-    plt.show()
 
     # Save results to the ./output subdirectory
     fig_images_and_dfts.savefig(
@@ -1110,7 +1098,7 @@ def transient_grating_artifact_filter(
             smooth=smooth,
             periodic_filtered=periodic_filtered,
             img_filtered=img_filtered,
-            img_filtered_final=img_filtered_final,
+            img_filtered_final=img_filtered_blur,
         )
     else:
         write_output_excel_file(
@@ -1123,8 +1111,11 @@ def transient_grating_artifact_filter(
             smooth=smooth,
             periodic_filtered=periodic_filtered,
             img_filtered=img_filtered,
-            img_filtered_final=img_filtered_final,
+            img_filtered_final=img_filtered_blur,
         )
 
+    # Display figures
+    plt.show()
+
     # Return results
-    return periodic, smooth, img_filtered, periodic_filtered, flt.f
+    return img_specs.img, periodic, smooth, img_filtered_blur, periodic_filtered, flt.f
