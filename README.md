@@ -1,4 +1,4 @@
-**Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map.**
+**Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map:**
 
 - Separate the input image (time-resolved spectroscopy map) into "smooth" and
 "periodic" components as per [[Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)]
