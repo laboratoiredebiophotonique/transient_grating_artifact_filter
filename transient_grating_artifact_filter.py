@@ -919,7 +919,7 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse: float,
     threshold_cutout: float,
-    λ_time_profile: float = 0,
+    lambda_time_profile: float = 0,
     cross_pass_band_width: int = 0,
     pass_upper_left_lower_right_quadrants: bool = True,
     interpolate_image_to_power_of_two: bool = False,
@@ -940,7 +940,7 @@ def transient_grating_artifact_filter(
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
         threshold_cutout (float): threshold for filter cutout identification ([0..1])
-        λ_time_profile (float): Wavelength at which the time profile is plotted
+        lambda_time_profile (float): Wavelength at which the time profile is plotted
         cross_pass_band_width (int): width of cross cutout in filter (default = 0)
         pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
                                               quadrants of the filter (default = False)
@@ -1045,7 +1045,7 @@ def transient_grating_artifact_filter(
         img_filtered=img_filtered_blur,
         img_specs=img_specs,
         artifact=artifact,
-        λ_time_profile=λ_time_profile,
+        λ_time_profile=lambda_time_profile,
     )
 
     # Display the various image & DFT pairs

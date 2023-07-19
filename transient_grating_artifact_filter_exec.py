@@ -32,37 +32,37 @@ cross_pass_band_width: int = 0
 pass_upper_left_lower_right_quadrants: bool = True
 
 # Wavelength at which the time line-profile is plotted (if 0, default to λ0_pump)
-λ_time_profile: float = 0
+lambda_time_profile: float = 0
 
 # Define simulation parameters for the selected structure
 if substrate_type == "croix":
     # Smooth unstructured gold film
     fname: str = "Croix.mat"
-    λ0_pump: float = 670.0
+    lambda0_pump: float = 670.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
 
 elif substrate_type == "gold_film":
     # Smooth unstructured gold film
     fname: str = "Figure_article_Parallel.mat"
-    λ0_pump: float = 600.0
+    lambda0_pump: float = 600.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
 
 elif substrate_type == "nano_pillars":
     # Nano-pillars
     fname = "Data_ROD_600_long.mat"
-    λ0_pump = 600.0
+    lambda0_pump = 600.0
     artifact_extent_λ = 25
     artifact_extent_t = 0.47
 
 elif substrate_type == "rhodamine":
     # Rhodamine solution
     fname = "Data_Rhodamine_570_2.mat"
-    λ0_pump = 570.0
+    lambda0_pump = 570.0
     artifact_extent_λ = 22
     artifact_extent_t = 0.55
-    λ_time_profile: float = 566.74
+    lambda_time_profile: float = 566.74
 
 else:
     raise ValueError("Unknown substrate type!")
@@ -70,12 +70,12 @@ else:
 # Run the simulation
 transient_grating_artifact_filter(
     fname=fname,
-    lambda0_pump=λ0_pump,
+    lambda0_pump=lambda0_pump,
     artifact_extent_lambda=artifact_extent_λ,
     artifact_extent_t=artifact_extent_t,
     threshold_ellipse=threshold_ellipse,
     threshold_cutout=threshold_cutout,
-    λ_time_profile=λ_time_profile,
+    lambda_time_profile=lambda_time_profile,
     cross_pass_band_width=cross_pass_band_width,
     pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
 )

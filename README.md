@@ -20,8 +20,8 @@ to remove any remaining high frequency noise.
 
 - The moisan2011 python package must be installed explicitly from [GitHub](https://github.com/sbrisard/moisan2011).
 
-Calling the script: *transient_grating_artifact_filter(fname, λ0_pump, artifact_extent_λ,
-artifact_extent_t, threshold_ellipse, threshold_cutout, filter_fill_ellipse)*
+Calling the script: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_λ,
+artifact_extent_t, threshold_ellipse, threshold_cutout)*
 
 The data are read from a Matlab, Excel, or .csv format file from the *data* subdirectory,
 the results are written to the *output* subdirectory.
@@ -34,7 +34,7 @@ Function parameters:
   - *Time*: *nt* time samples (ps)
 
 - *Artifact* class object parameters (see class definition for details):
-  - *λ0* (float): pump central wavelength (nm)
+  - *lambda0_pump* (float): pump central wavelength (nm)
   - *extent_t* (float): artifact extent in time (ps)
   - *extent_λ* (float): artifact extent in wavelength (nm)
 
@@ -44,8 +44,8 @@ Function parameters:
   - NB: *threshold_cutout* > *threshold_ellipse*
 
 Optional parameters:
-  - *λ_time_profile* (float): Wavelength at which the time line profile is 
-                    plotted (nm, if 0 default to *λ0*).
+  - *lambda_time_profile* (float): Wavelength at which the time line-profile is 
+                    plotted (nm, if 0 default to *lambda0_pump*).
   - *cross_pass_band_width* (int) = width of a cross-shaped pass-band in the filter along the
                     horizontal and vertical axes of the Fourier plane to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
