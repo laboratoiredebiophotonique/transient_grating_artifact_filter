@@ -20,7 +20,7 @@ to remove any remaining high frequency noise.
 
 - The moisan2011 python package must be installed explicitly from [GitHub](https://github.com/sbrisard/moisan2011).
 
-Calling the script: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_λ,
+Calling the script: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
 artifact_extent_t, threshold_ellipse, threshold_cutout)*
 
 The data are read from a Matlab, Excel, or .csv format file from the *data* subdirectory,
@@ -35,8 +35,8 @@ Function parameters:
 
 - *Artifact* class object parameters (see class definition for details):
   - *lambda0_pump* (float): pump central wavelength (nm)
-  - *extent_t* (float): artifact extent in time (ps)
-  - *extent_λ* (float): artifact extent in wavelength (nm)
+  - *artifact_extent_t* (float): artifact extent in time (ps)
+  - *artifact_extent_lambda* (float): artifact extent in wavelength (nm)
 
 - *Filter* class object parameters (see class definition for details):
   - *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
@@ -64,6 +64,6 @@ Debugging:
   reach the optimal compromise between removing the artifact and preserving the 
   underlying baseline spectroscopy data.
 - The script draws a cross-hair pattern over the elliptical mask identified from the
-  thresholded area with *threshold_ellipse*. The *extent_t* and *extent_λ* input
+  thresholded area with *threshold_ellipse*. The *artifact_extent_t* and *artifact_extent_lambda* input
   parameters can be fine-tuned to line up the cross-hair with the ellipse axes.
 
