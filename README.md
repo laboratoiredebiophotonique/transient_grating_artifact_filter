@@ -1,4 +1,4 @@
-Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map.
+**Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map.**
 
 - Separate the input image (time-resolved spectroscopy map) into "smooth" and
 "periodic" components as per [[Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)]
@@ -20,13 +20,10 @@ to remove any remaining high frequency noise.
 
 - The moisan2011 python package must be installed explicitly from [GitHub](https://github.com/sbrisard/moisan2011).
 
-Calling the script: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
+**Calling the script**: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
 artifact_extent_t, threshold_ellipse, threshold_cutout)*
 
-The data are read from a Matlab, Excel, or .csv format file from the *data* subdirectory,
-the results are written to the *output* subdirectory.
-
-Function parameters:
+**Required function parameters**:
 
 - *fname* (str): input file in the *data* subdirectory containing the following data:
   - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
@@ -43,7 +40,7 @@ Function parameters:
   - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
   - NB: *threshold_cutout* > *threshold_ellipse*
 
-Optional parameters:
+**Optional function parameters**:
   - *lambda_time_profile* (float): Wavelength at which the time line-profile is 
                     plotted (nm, if 0 default to *lambda0_pump*).
   - *cross_pass_band_width* (int) = width of a cross-shaped pass-band in the filter along the
@@ -54,12 +51,11 @@ Optional parameters:
                     areas for upper-left and lower-right quadrants of the Fourier plane
                     (default = True, i.e. pass upper-left and lower-right quadrants).
 
-Output:
-- Files written to the *output* subdirectory
+**Output**: Plot displays and files written to the *output* subdirectory
 
-Testing the script: call *transient_grating_artifact_filter_exec.py*
+**Testing the script**: *transient_grating_artifact_filter_exec.py*
 
-Debugging:
+**Debugging**:
 - The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to
   reach the optimal compromise between removing the artifact and preserving the 
   underlying baseline spectroscopy data.
