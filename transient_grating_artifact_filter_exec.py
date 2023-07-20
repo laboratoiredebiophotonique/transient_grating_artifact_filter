@@ -19,8 +19,8 @@ plt.rcParams.update(
     },
 )
 
-# Choice of sample to simulate: "gold_film", "croix", "nano_pillars", or "rhodamine"
-substrate_type: str = "croix"
+# Choice of sample to simulate: "gold_film", "nano_crosses", "nano_rods", or "rhodamine"
+substrate_type: str = "nano_crosses"
 
 # Define simulation parameters for the selected sample
 if substrate_type == "gold_film":
@@ -30,15 +30,15 @@ if substrate_type == "gold_film":
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
 
-elif substrate_type == "croix":
+elif substrate_type == "nano_crosses":
     # Structured gold film (nano-crosses)
     fname: str = "Croix.mat"
     lambda0_pump: float = 670.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
 
-elif substrate_type == "nano_pillars":
-    # Structured gold film (nano-pillars)
+elif substrate_type == "nano_rods":
+    # Structured gold film (nano-rods)
     fname = "Data_ROD_600_long.mat"
     lambda0_pump = 600.0
     artifact_extent_λ = 25
