@@ -18,46 +18,34 @@ plt.rcParams.update(
         "image.cmap": "coolwarm",
     },
 )
-plt.ion()
 
-# Structures to simulate: "croix", "gold_film", "nano_pillars", "rhodamine"
-substrate_type: str = "rhodamine"
+# Choice of sample to simulate: "gold_film", "croix", "nano_pillars", or "rhodamine"
+substrate_type: str = "croix"
 
-# Thresholds for filter construction
-threshold_ellipse: float = 0.1
-threshold_cutout: float = 0.5
-
-# transient_grating_artifact_filter() optional parameters
-cross_pass_band_width: int = 0
-pass_upper_left_lower_right_quadrants: bool = True
-
-# Wavelength at which the time line-profile is plotted (if 0, default to λ0_pump)
-lambda_time_profile: float = 0
-
-# Define simulation parameters for the selected structure
-if substrate_type == "croix":
-    # Smooth unstructured gold film
-    fname: str = "Croix.mat"
-    lambda0_pump: float = 670.0
-    artifact_extent_λ: float = 26
-    artifact_extent_t: float = 0.35
-
-elif substrate_type == "gold_film":
-    # Smooth unstructured gold film
+# Define simulation parameters for the selected sample
+if substrate_type == "gold_film":
+    # Unstructured (smooth) gold film
     fname: str = "Figure_article_Parallel.mat"
     lambda0_pump: float = 600.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
 
+elif substrate_type == "croix":
+    # Structured gold film (nano-crosses)
+    fname: str = "Croix.mat"
+    lambda0_pump: float = 670.0
+    artifact_extent_λ: float = 26
+    artifact_extent_t: float = 0.35
+
 elif substrate_type == "nano_pillars":
-    # Nano-pillars
+    # Structured gold film (nano-pillars)
     fname = "Data_ROD_600_long.mat"
     lambda0_pump = 600.0
     artifact_extent_λ = 25
     artifact_extent_t = 0.47
 
 elif substrate_type == "rhodamine":
-    # Rhodamine solution
+    # Rhodamine solution atop unstructured gold film
     fname = "Data_Rhodamine_570_2.mat"
     lambda0_pump = 570.0
     artifact_extent_λ = 22
@@ -67,8 +55,17 @@ elif substrate_type == "rhodamine":
 else:
     raise ValueError("Unknown substrate type!")
 
+# Thresholds for filter construction
+threshold_ellipse: float = 0.1
+threshold_cutout: float = 0.5
+
+# Optional parameters
+lambda_time_profile: float = 0
+cross_pass_band_width: int = 0
+pass_upper_left_lower_right_quadrants: bool = True
+
 # Run the simulation
-transient_grating_artifact_filter(
+result = transient_grating_artifact_filter(
     fname=fname,
     lambda0_pump=lambda0_pump,
     artifact_extent_lambda=artifact_extent_λ,

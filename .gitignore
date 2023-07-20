@@ -128,7 +128,4 @@ fabric.properties
 .idea
 
 # User specific stuff
-/output/*.png
-/output/*.mat
-/output/*.xlsx
-/Moisan2011/code on GitHub/moisan2011-master.zip
+output

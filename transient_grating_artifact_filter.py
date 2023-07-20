@@ -32,7 +32,7 @@ import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "3.00"
+__version__: str = "3.02"
 
 
 @dataclass
@@ -1057,7 +1057,7 @@ def transient_grating_artifact_filter(
     img_filtered_final_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered_blur)
 
     # Plot line profiles in time, wavelength, and normal to the artifact
-    fig_normal: Figure = plot_line_profiles(
+    fig_line_profiles: Figure = plot_line_profiles(
         img=img_specs.img,
         img_filtered=img_filtered_blur,
         img_specs=img_specs,
@@ -1100,11 +1100,12 @@ def transient_grating_artifact_filter(
         fname=fname,
     )
 
-    # Save results to the ./output subdirectory
+    # Save results to the ./output subdirectory (create it, if it doesn't exist)
+    Path("output").mkdir(parents=True, exist_ok=True)
     fig_images_and_dfts.savefig(
         Path("output") / f"{fname_path.stem}_images_and_dfts.png"
     )
-    fig_normal.savefig(Path("output") / f"{fname_path.stem}_line_profiles.png")
+    fig_line_profiles.savefig(Path("output") / f"{fname_path.stem}_line_profiles.png")
     if fname_path.suffix == ".mat":
         write_output_matlab_file(
             fname_path=fname_path,
