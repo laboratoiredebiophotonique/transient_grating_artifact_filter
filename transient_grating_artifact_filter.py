@@ -75,17 +75,14 @@ class ImageSpecs:
             self.height, self.width = self.img_in.shape
 
         # Image center pixel coordinates
-        self.x0 = self.width // 2
-        self.y0 = self.height // 2
+        self.x0, self.y0 = self.width // 2, self.height // 2
 
         # Resample the input arrays on a regular even-spaced grid to account for any
         # non-uniform time or frequency sampling
-        self.λ0: float = self.λs_in[0]
-        self.λ1: float = self.λs_in[-1]
+        self.λ0, self.λ1 = self.λs_in[0], self.λs_in[-1]
         self.λs: np.ndarray = np.linspace(self.λ0, self.λ1, self.width)
         self.dλ: float = self.λs[1] - self.λs[0]
-        self.t0: float = self.ts_in[0]
-        self.t1: float = self.ts_in[-1]
+        self.t0, self.t1 = self.ts_in[0], self.ts_in[-1]
         self.ts: np.ndarray = np.linspace(self.t0, self.t1, self.height)
         self.dt: float = self.ts[1] - self.ts[0]
         interp = RegularGridInterpolator((self.ts_in, self.λs_in), self.img_in)
@@ -146,14 +143,15 @@ class Artifact:
         # Coordinate endpoints of line though center of the artifact
         slope: float = self.extent_t_pixels / self.extent_λ_pixels
         intercept: float = self.t0_pixels - slope * self.λ0_pixels
-        self.x0_pixels: int = int(self.λ0_pixels - self.extent_λ_pixels // 2)
-        self.x1_pixels: int = int(self.λ0_pixels + self.extent_λ_pixels // 2)
-        self.y0_pixels: int = int(slope * self.x0_pixels + intercept)
-        self.y1_pixels: int = int(slope * self.x1_pixels + intercept)
+        self.x0_pixels, self.x1_pixels = int(
+            self.λ0_pixels - self.extent_λ_pixels // 2
+        ), int(self.λ0_pixels + self.extent_λ_pixels // 2)
+        self.y0_pixels, self.y1_pixels = int(slope * self.x0_pixels + intercept), int(
+            slope * self.x1_pixels + intercept
+        )
 
         # Coordinate endpoints of normal through center of the artifact
-        self.normal_y0_pixels: int = self.y0_pixels
-        self.normal_y1_pixels: int = self.y1_pixels
+        self.normal_y0_pixels, self.normal_y1_pixels = self.y0_pixels, self.y1_pixels
         normal_slope: float = (
             -1 / slope * (self.img_specs.height / self.img_specs.width)
         )
@@ -170,18 +168,22 @@ class Artifact:
         )
 
         # Convert pixel coordinates to data coordinates
-        self.x0: float = self.img_specs.λs[self.x0_pixels]
-        self.x1: float = self.img_specs.λs[self.x1_pixels]
-        self.y0: float = self.img_specs.ts[self.img_specs.height - self.y0_pixels]
-        self.y1: float = self.img_specs.ts[self.img_specs.height - self.y1_pixels]
-        self.normal_x0: float = self.img_specs.λs[self.normal_x0_pixels]
-        self.normal_x1: float = self.img_specs.λs[self.normal_x1_pixels]
-        self.normal_y0: float = self.img_specs.ts[
-            self.img_specs.height - self.normal_y0_pixels
-        ]
-        self.normal_y1: float = self.img_specs.ts[
-            self.img_specs.height - self.normal_y1_pixels
-        ]
+        self.x0, self.x1 = (
+            self.img_specs.λs[self.x0_pixels],
+            self.img_specs.λs[self.x1_pixels],
+        )
+        self.y0, self.y1 = (
+            self.img_specs.ts[self.img_specs.height - self.y0_pixels],
+            self.img_specs.ts[self.img_specs.height - self.y1_pixels],
+        )
+        self.normal_x0, self.normal_x1 = (
+            self.img_specs.λs[self.normal_x0_pixels],
+            self.img_specs.λs[self.normal_x1_pixels],
+        )
+        self.normal_y0, self.normal_y1 = (
+            self.img_specs.ts[self.img_specs.height - self.normal_y0_pixels],
+            self.img_specs.ts[self.img_specs.height - self.normal_y1_pixels],
+        )
 
 
 @dataclass
