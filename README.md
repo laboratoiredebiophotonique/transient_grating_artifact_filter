@@ -53,7 +53,7 @@ artifact_extent_t, threshold_ellipse, threshold_cutout)*
 
 **Output**: Plot displays and files written to the *output* subdirectory
 
-**Testing the script**: *transient_grating_artifact_filter_exec.py*
+**Testing**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
 
 **Debugging**:
 - The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to
