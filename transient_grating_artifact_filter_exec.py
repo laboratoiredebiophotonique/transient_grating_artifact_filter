@@ -85,4 +85,4 @@ transient_grating_artifact_filter(
 if sys.gettrace() is not None:
     print("Breakpoint here to keep figures visible in IDE!")
 else:
-    input("Script paused to display figures, press any key to exit...")
+    input("Script paused to display figures, press return to exit...")

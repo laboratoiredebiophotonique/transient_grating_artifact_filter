@@ -4,5 +4,6 @@ opencv-python
 scikit-image
 scipy
 pandas
-moisan2011
 pathlib
+jupyter
+-e git+https://github.com/sbrisard/moisan2011.git@master#egg=moisan2011

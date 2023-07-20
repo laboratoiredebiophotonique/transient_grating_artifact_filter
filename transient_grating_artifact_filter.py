@@ -38,7 +38,7 @@ __version__: str = "3.00"
 @dataclass
 class ImageSpecs:
     """
-    Time-resolved spectroscopy data specifications
+    Time-resolved spectroscopy data array specifications
 
     λs_in (np.ndarray): input array of wavelengths (nm)
     ts_in (np.ndarray): input array of times (ps)
@@ -53,18 +53,20 @@ class ImageSpecs:
     interpolate_image_to_power_of_two: bool = False
 
     def __post_init__(self):
-        # Check that input wavelength and time arrays match input image dimensions
+        # Check that wavelength and time arrays match spectroscopy image data dimensions
         if (
             len(self.λs_in) != self.img_in.shape[1]
             or len(self.ts_in) != self.img_in.shape[0]
         ):
             raise ValueError(
-                "Input file array dimensions are inconsistent "
-                "(mismatch between Data vs Wavelength and/or Time array dimensions)!"
+                "Input file array dimensions are inconsistent: mismatch between "
+                f"data (nλ = {self.img_in.shape[1]}, nt = {self.img_in.shape[0]}) "
+                f"vs wavelength (nλ = {len(self.λs_in)}) "
+                f"and/or time (nλ = {len(self.ts_in)}) array dimensions!"
             )
 
         # Set image dimensions to nearest larger power of 2 for interpolation, if
-        # requested, else use input image dimensions
+        # requested, else stick with input image dimensions
         if self.interpolate_image_to_power_of_two:
             self.height, self.width = 2 ** np.ceil(
                 np.log2(self.img_in.shape[0])
@@ -72,7 +74,7 @@ class ImageSpecs:
         else:
             self.height, self.width = self.img_in.shape
 
-        # Image dimensions center pixel coordinates
+        # Image center pixel coordinates
         self.x0 = self.width // 2
         self.y0 = self.height // 2
 
@@ -99,7 +101,7 @@ class Artifact:
     λ0 (float): artifact center wavelength (pump center wavelength, nm)
     extent_λ (float): artifact extent along the wavelength axis (nm)
     extent_t (float): artifact extent along the time axis (ps)
-    img_specs (ImageSpecs): data specifications
+    img_specs (ImageSpecs): image data specifications
 
     """
 
@@ -111,12 +113,18 @@ class Artifact:
     def __post_init__(self):
         # Check artifact specifications against image dimensions
         if (
-            (self.λ0 < self.img_specs.λ0 or self.λ0 > self.img_specs.λ1)
-            or (self.extent_λ > (self.img_specs.λ1 - self.img_specs.λ0))
-            or (self.extent_t > (self.img_specs.t1 - self.img_specs.t0))
+            ((self.λ0 - self.extent_λ / 2) < self.img_specs.λ0)
+            or ((self.λ0 + self.extent_λ / 2) > self.img_specs.λ1)
+            or (-self.extent_t / 2 < self.img_specs.t0)
+            or (self.extent_t / 2 > self.img_specs.t1)
         ):
             raise ValueError(
-                "Artifact specs are out of range for the input image dimensions!"
+                "Artifact extent "
+                f"([{self.λ0 - self.extent_λ / 2:.1f}:{self.λ0 + self.extent_λ / 2:.1f}] nm x "
+                f"[{- self.extent_t / 2: .2f}:{self.extent_t / 2:.2f}] ps) "
+                "is outside the input image data range "
+                f"([{self.img_specs.λ0:.1f}:{self.img_specs.λ1:.1f}] nm x "
+                f"[{self.img_specs.t0:.2f}:{self.img_specs.t1:.2f}] ps)!"
             )
 
         # Artifact geometry in units of pixels
@@ -182,6 +190,7 @@ class Filter:
     Filter parameters
 
     img_dft_mag (np.ndarray): DFT magnitude image used to define the filter
+                              by thresholding
     threshold_ellipse (float): threshold for defining the ellipse
     threshold_cutout (float): threshold for defining the cutout
     img_specs (ImageSpecs): image data specifications
@@ -207,16 +216,24 @@ class Filter:
     pass_upper_left_lower_right_quadrants: bool
 
     def __post_init__(self):
-        # Check input parameters
+        # Check thresholds and cross_pass_band_width
         if (
             (self.threshold_ellipse < 0 or self.threshold_ellipse > 1)
             or (self.threshold_cutout < 0 or self.threshold_cutout > 1)
-            or self.cross_pass_band_width < 0
+            or (
+                self.cross_pass_band_width < 0
+                or self.cross_pass_band_width > self.img_specs.width
+                or self.cross_pass_band_width > self.img_specs.height
+            )
         ):
             raise ValueError(
-                "One or more of the values supplied for the parameters threshold_ellipse, "
-                "threshold_cutout, or cross_pass_band_width are "
-                "out of range!"
+                "One or more of the values supplied for the parameters "
+                f"threshold_ellipse ({self.threshold_ellipse:.2f}), "
+                f"threshold_cutout ({self.threshold_cutout:.2f}), "
+                f"or cross_pass_band_width ({self.cross_pass_band_width}) are "
+                "out of range (thresholds must be in the range [0..1], "
+                "the cross pass-band width must be non-negative and less than the image"
+                " height/width)!"
             )
         if self.threshold_ellipse > self.threshold_cutout:
             raise ValueError(
