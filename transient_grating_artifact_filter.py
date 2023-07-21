@@ -851,6 +851,9 @@ def write_output_excel_file(
                 "threshold_ellipse": [flt.threshold_ellipse],
                 "threshold_cutout": [flt.threshold_cutout],
                 "cross_pass_band_width": [flt.cross_pass_band_width],
+                "pass_upper_left_lower_right_quadrants": [
+                    flt.pass_upper_left_lower_right_quadrants
+                ],
                 "filter_ellipse_long_axis_radius_pixels": [
                     flt.ellipse_long_axis_radius
                 ],
@@ -911,6 +914,7 @@ def write_output_matlab_file(
             "threshold_ellipse": flt.threshold_ellipse,
             "threshold_cutout": flt.threshold_cutout,
             "cross_pass_band_width": flt.cross_pass_band_width,
+            "pass_upper_left_lower_right_quadrants": flt.pass_upper_left_lower_right_quadrants,
             "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
             "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
         },
