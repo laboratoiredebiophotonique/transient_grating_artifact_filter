@@ -20,12 +20,12 @@ plt.rcParams.update(
 )
 
 # Choice of sample to simulate: "gold_film", "nano_crosses", "nano_rods", or "rhodamine"
-substrate_type: str = "nano_crosses"
+substrate_type: str = "gold_film"
 
 # Define simulation parameters for the selected sample
 if substrate_type == "gold_film":
     # Unstructured (smooth) gold film
-    fname: str = "Figure_article_Parallel.mat"
+    fname: str = "Unstructured-metal-parallel-pol.mat"
     lambda0_pump: float = 600.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
@@ -39,14 +39,14 @@ elif substrate_type == "nano_crosses":
 
 elif substrate_type == "nano_rods":
     # Structured gold film (nano-rods)
-    fname = "Data_ROD_600_long.mat"
+    fname = "Nano-rods.mat"
     lambda0_pump = 600.0
     artifact_extent_λ = 25
     artifact_extent_t = 0.47
 
 elif substrate_type == "rhodamine":
     # Rhodamine solution atop unstructured gold film
-    fname = "Data_Rhodamine_570_2.mat"
+    fname = "Rhodamine.mat"
     lambda0_pump = 570.0
     artifact_extent_λ = 22
     artifact_extent_t = 0.55
