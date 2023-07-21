@@ -19,8 +19,17 @@ plt.rcParams.update(
     },
 )
 
+# Thresholds for filter construction
+threshold_ellipse: float = 0.1
+threshold_cutout: float = 0.5
+
+# Optional parameters
+cross_pass_band_width: int = 0
+pass_upper_left_lower_right_quadrants: bool = True
+lambda_time_profile: float = 0
+
 # Choice of sample to simulate: "gold_film", "nano_crosses", "nano_rods", or "rhodamine"
-substrate_type: str = "gold_film"
+substrate_type: str = "nano_crosses"
 
 # Define simulation parameters for the selected sample
 if substrate_type == "gold_film":
@@ -33,9 +42,10 @@ if substrate_type == "gold_film":
 elif substrate_type == "nano_crosses":
     # Structured gold film (nano-crosses)
     fname = "Nano-crosses.mat"
-    lambda0_pump = 670.0
+    lambda0_pump = 675.0
     artifact_extent_λ = 26
     artifact_extent_t = 0.35
+    lambda_time_profile = 673.0
 
 elif substrate_type == "nano_rods":
     # Structured gold film (nano-rods)
@@ -50,19 +60,10 @@ elif substrate_type == "rhodamine":
     lambda0_pump = 570.0
     artifact_extent_λ = 22
     artifact_extent_t = 0.55
-    lambda_time_profile: float = 566.74
+    lambda_time_profile = 567.0
 
 else:
     raise ValueError("Unknown substrate type!")
-
-# Thresholds for filter construction
-threshold_ellipse: float = 0.1
-threshold_cutout: float = 0.5
-
-# Optional parameters
-lambda_time_profile: float = 0
-cross_pass_band_width: int = 0
-pass_upper_left_lower_right_quadrants: bool = True
 
 # Run the simulation
 result = transient_grating_artifact_filter(
