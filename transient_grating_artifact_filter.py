@@ -32,7 +32,7 @@ import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "3.02"
+__version__: str = "3.03"
 
 
 @dataclass
