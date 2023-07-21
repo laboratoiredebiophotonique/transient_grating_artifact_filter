@@ -25,7 +25,7 @@ substrate_type: str = "gold_film"
 # Define simulation parameters for the selected sample
 if substrate_type == "gold_film":
     # Unstructured (smooth) gold film
-    fname: str = "Unstructured-metal-parallel-pol.xlsx"
+    fname: str = "Unstructured-metal-parallel-pol.mat"
     lambda0_pump: float = 600.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
