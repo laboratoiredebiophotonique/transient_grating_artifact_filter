@@ -32,7 +32,7 @@ if substrate_type == "gold_film":
 
 elif substrate_type == "nano_crosses":
     # Structured gold film (nano-crosses)
-    fname: str = "Croix.mat"
+    fname: str = "Nano-crosses.mat"
     lambda0_pump: float = 670.0
     artifact_extent_λ: float = 26
     artifact_extent_t: float = 0.35
