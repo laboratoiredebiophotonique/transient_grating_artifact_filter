@@ -32,7 +32,7 @@ import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "3.04"
+__version__: str = "3.05"
 
 
 @dataclass
@@ -264,7 +264,7 @@ class Filter:
 
         """
 
-        # Normalize log scale image to [0, 1], limit to 4 decades of dynamic range else
+        # Normalize log scale image to [0..1], limit to 4 decades of dynamic range else
         # small pixel values will skew the normalization.
         img[img < np.amax(img) - 4] = np.amax(img) - 4
         img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
@@ -318,18 +318,28 @@ class Filter:
     def define_filter_ellipse(self) -> Tuple[int, int, np.ndarray]:
         """
 
-        Determine filter ellipse parameters from periodic component DFT magnitude
+        Determine the filter ellipse parameters from the periodic component DFT
+        magnitude, i.e. the filter "stop band"
 
         Returns: ellipse_long_axis_radius (int), ellipse_short_axis_radius (int)
                  img_binary_ellipse_rgb (np.ndarray)
 
         """
 
-        # Determine ellipse long & short axis lengths (lengths of lines along the
-        # artifact diagonal and normal to the diagonal)
+        # Binarize the periodic component DFT magnitude image using the
+        # "threshold_ellipse" parameter to determine the approximate area of the
+        # elliptically shaped spectrum of the artifact centered on the origin
+        # in Fourier space
         img_binary_ellipse: np.ndarray = self.binarize_image(
             img=self.img_dft_mag, threshold=self.threshold_ellipse
         )
+
+        # From the experimental parameters (time and wavelength artifact extent, which
+        # yield the angle of the elliptically-shaped spectrum of the artifact in Fourier
+        # space), determine the long and short diagonals of this ellipse and the lengths
+        # of the above-threshold pixels lines along these diagonals, i.e. the lengths of
+        # the long and short axes of the ellipse (actually the radii, half the lengths
+        # of the axes).
         l: float = min(self.img_dft_mag.shape) / 2.5
         artifact_long_diagonal_pixel_coordinates: np.ndarray = line(
             r0=int(self.img_specs.y0 - l * np.sin(np.radians(self.artifact.angle))),
@@ -374,7 +384,8 @@ class Filter:
                 f"Threshold value for ellipse ({self.threshold_ellipse}) is too high!"
             )
 
-        # Build image of ellipse above-threshold pixels and resulting enclosing ellipse
+        # For debugging/validation purposes, build an image of the ellipse area above
+        # threshold pixels and the resulting enclosing ellipse (the filter stop band)
         img_binary_ellipse_rgb = np.repeat(
             img_binary_ellipse[:, :, np.newaxis], 3, axis=2
         )
@@ -399,17 +410,15 @@ class Filter:
 
     def build_filter(self) -> np.ndarray:
         """
-        Build filter image
+        Build filter image: ellipse (stop band) minus the pass-band components (central
+                            cutout, central cross, upper-left/lower-right quadrants)
 
         Returns: binary image filter
 
         """
 
-        # Draw ellipses (filled, and outline only for debugging)
+        # Draw the ellipse in a blank binary image (the "stop-band" of the filter)
         ellipse_image_binary: np.ndarray = np.ones(
-            (self.img_specs.height, self.img_specs.width), dtype=np.uint8
-        )
-        ellipse_image_binary_outline: np.ndarray = np.zeros(
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
         cv.ellipse(
@@ -422,18 +431,8 @@ class Filter:
             0,
             -1,
         )
-        cv.ellipse(
-            ellipse_image_binary_outline,
-            (self.img_specs.x0, self.img_specs.y0),
-            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
-            -self.artifact.angle,
-            0,
-            360,
-            1,
-            1,
-        )
 
-        # Remove cutout from center of ellipse (pixels around origin above threshold)
+        # Add center cutout pass-band (pixels around origin above "threshold_cutout")
         cutout_image: np.ndarray = self.binarize_image(
             img=self.img_dft_mag, threshold=self.threshold_cutout
         )
@@ -445,7 +444,7 @@ class Filter:
             ellipse_image_binary.astype(np.float64) + cutout_image
         )
 
-        # Pass (do not filter) bands around horizontal and vertical axes, if requested
+        # Add cross pass-bands around horizontal and vertical axes, if requested
         if self.cross_pass_band_width > 0:
             filter_image[
                 self.img_specs.y0
@@ -463,7 +462,7 @@ class Filter:
             ] = 1
             filter_image[filter_image == 2] = 1
 
-        # Pass (do not filter) upper-left and lower-right quadrants, if requested
+        # Add pass-bands for upper-left and lower-right quadrants, if requested
         if self.pass_upper_left_lower_right_quadrants:
             filter_image[
                 0 : self.img_specs.height // 2, 0 : self.img_specs.width // 2
@@ -473,7 +472,9 @@ class Filter:
             ] = 1
             filter_image[filter_image == 2] = 1
 
-        # Show images of thresholded pixels and filter
+        # For debugging/validation, show images of (1) the thresholded pixels used to
+        # determine the filter geometry, (2) the resulting binary filter image,
+        # and (3) the outline of the ellipse superimposed on the periodic component DFT
         fig, axs = plt.subplots(3)
 
         # Draw thresholded ellipse binary image with major/minor axes
@@ -493,6 +494,19 @@ class Filter:
         axs[2].set(
             title="Filter ellipse outline over binarized periodic component DFT"
             "\nNB: data limited to 4 decade dynamic range in binarization"
+        )
+        ellipse_image_binary_outline: np.ndarray = np.zeros(
+            (self.img_specs.height, self.img_specs.width), dtype=np.uint8
+        )
+        cv.ellipse(
+            ellipse_image_binary_outline,
+            (self.img_specs.x0, self.img_specs.y0),
+            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
+            -self.artifact.angle,
+            0,
+            360,
+            1,
+            1,
         )
         periodic_with_ellipse_outline: np.ndarray = np.copy(self.img_dft_mag)
         periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(

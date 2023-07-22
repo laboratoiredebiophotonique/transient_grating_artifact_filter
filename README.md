@@ -7,7 +7,8 @@ non-periodic nature of the image.
 
 - Filter the artifact from the periodic component in the Fourier domain using
 an ellipse with a pass-band cutout at the center to preserve the low-frequency content of the
-baseline data. Additional pass-band areas can be added to fine-tune the filtering
+baseline data. The process to build the filter is described in detail in the *Filter*
+Class declaration. Additional pass-band areas can be added to fine-tune the filtering
 (see *Optional parameters* below).
 
 - Recombine the filtered periodic component with the smooth component

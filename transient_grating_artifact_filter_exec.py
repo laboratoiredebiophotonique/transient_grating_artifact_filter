@@ -29,7 +29,7 @@ pass_upper_left_lower_right_quadrants: bool = True
 lambda_time_profile: float = 0
 
 # Choice of sample to simulate: "gold_film", "nano_crosses", "nano_rods", or "rhodamine"
-substrate_type: str = "nano_crosses"
+substrate_type: str = "gold_film"
 
 # Define simulation parameters for the selected sample
 if substrate_type == "gold_film":
