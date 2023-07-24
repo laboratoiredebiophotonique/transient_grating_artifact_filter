@@ -53,9 +53,9 @@ subdirectory):
                     areas for upper-left and lower-right quadrants of the Fourier plane
                     (default = True, i.e. pass upper-left and lower-right quadrants).
 
-**Output**: Plot displays and files written to the *output* subdirectory
+**Output**: Plot displays and files written to the *output* subdirectory (created automatically if it doesn't exist)
 
-**Testing**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
+**Usage**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
 
 **Debugging**:
 - The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to
