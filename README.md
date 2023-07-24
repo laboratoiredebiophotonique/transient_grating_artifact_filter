@@ -21,28 +21,28 @@ to remove any remaining high frequency noise.
 
 - The moisan2011 python package must be installed explicitly from [GitHub](https://github.com/sbrisard/moisan2011).
 
-**Calling the script**: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
+**Usage**: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
 artifact_extent_t, threshold_ellipse, threshold_cutout)*
 
-**Required function parameters**:
+- **Required function parameters**:
 
-- *fname* (str): input file in the *data* subdirectory containing the following data (see examples files in the *data*
-subdirectory):
-  - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
-  - *Wavelength*: *nλ* wavelength samples (nm)
-  - *Time*: *nt* time samples (ps)
+  - *fname* (str): input file in the *data* subdirectory containing the following data (see examples files in the *data*
+  subdirectory):
+    - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
+    - *Wavelength*: *nλ* wavelength samples (nm)
+    - *Time*: *nt* time samples (ps)
 
-- *Artifact* class object parameters (see class definition for details):
-  - *lambda0_pump* (float): pump central wavelength (nm)
-  - *artifact_extent_t* (float): artifact extent in time (ps)
-  - *artifact_extent_lambda* (float): artifact extent in wavelength (nm)
+  - *Artifact* class object parameters (see class definition for details):
+    - *lambda0_pump* (float): pump central wavelength (nm)
+    - *artifact_extent_t* (float): artifact extent in time (ps)
+    - *artifact_extent_lambda* (float): artifact extent in wavelength (nm)
 
-- *Filter* class object parameters (see class definition for details):
-  - *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
-  - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
-  - NB: *threshold_cutout* > *threshold_ellipse*
+  - *Filter* class object parameters (see class definition for details):
+    - *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
+    - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
+    - NB: *threshold_cutout* > *threshold_ellipse*
 
-**Optional function parameters**:
+- **Optional function parameters**:
   - *lambda_time_profile* (float): Wavelength at which the time line-profile is 
                     plotted (nm, if 0 default to *lambda0_pump*).
   - *cross_pass_band_width* (int) = width of a cross-shaped pass-band in the filter along the
@@ -55,7 +55,7 @@ subdirectory):
 
 **Output**: Plot displays and files written to the *output* subdirectory (created automatically if it doesn't exist)
 
-**Usage**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
+**Examples**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
 
 **Debugging**:
 - The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to
