@@ -26,7 +26,8 @@ artifact_extent_t, threshold_ellipse, threshold_cutout)*
 
 **Required function parameters**:
 
-- *fname* (str): input file in the *data* subdirectory containing the following data:
+- *fname* (str): input file in the *data* subdirectory containing the following data (see examples files in the *data*
+subdirectory):
   - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
   - *Wavelength*: *nλ* wavelength samples (nm)
   - *Time*: *nt* time samples (ps)
