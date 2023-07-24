@@ -56,12 +56,12 @@ artifact_extent_t, threshold_ellipse, threshold_cutout)*
 - **Output**: Plot displays and files written to the *output* subdirectory (created automatically if it doesn't exist)
 
 - **Debugging/tuning**:
-- The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to
-  reach the optimal compromise between removing the artifact and preserving the 
-  underlying baseline spectroscopy data.
-- The script draws a cross-hair pattern over the elliptical mask identified from the
-  thresholded area with *threshold_ellipse*. The *artifact_extent_t* and *artifact_extent_lambda* input
-  parameters can be fine-tuned to line up the cross-hair with the ellipse axes.
+  - The *threshold_ellipse* and *threshold_cutout* input parameters must be adjusted to
+    reach the optimal compromise between removing the artifact and preserving the 
+    underlying baseline spectroscopy data.
+  - The script draws a cross-hair pattern over the elliptical mask identified from the
+    thresholded area with *threshold_ellipse*. The *artifact_extent_t* and *artifact_extent_lambda* input
+    parameters can be fine-tuned to line up the cross-hair with the ellipse axes.
 
 **Examples**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
 
