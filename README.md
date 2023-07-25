@@ -1,4 +1,8 @@
-**Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map:**
+## Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map:
+[![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://choosealicense.com/)
+[![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968)
+[![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
 
 - Separate the input image (time-resolved spectroscopy map) into "smooth" and
 "periodic" components as per [[Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)]
@@ -14,33 +18,26 @@ Class declaration. Additional pass-band areas can be added to fine-tune the filt
 - Recombine the filtered periodic component with the smooth component
 to generate the filtered image.
 
-- A light gaussian filtering using a 3x3 kernel (blurring) is applied to the filtered result
+- Apply a light gaussian filtering using a 3x3 kernel (blurring)
 to remove any remaining high frequency noise.
 
-- The script can accommodate non-uniformly sampled data in time and/or wavelength.
-
-- The moisan2011 package is required, it can either be installed automatically (see requirements.txt)
-or manually from [GitHub](https://github.com/sbrisard/moisan2011).
-
-[![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
-[![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://choosealicense.com/)
-[![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968)
-[![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
 
 ![Transient Grating Artifact filter image](illustration.png)
 
 **Reference**: coming soon!
 
-**Usage**: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
-artifact_extent_t, threshold_ellipse, threshold_cutout)*
+## Usage:
+**transient_grating_artifact_filter**(fname, lambda0_pump, artifact_extent_lambda,
+artifact_extent_t, threshold_ellipse, threshold_cutout)
 
-- **Required function parameters**:
+- **Required parameters**:
 
   - *fname* (str): input file in the *data* subdirectory containing the following data (see examples files in the *data*
   subdirectory):
     - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
     - *Wavelength*: *nλ* wavelength samples (nm)
     - *Time*: *nt* time samples (ps)
+    - NB: The script can accommodate non-uniformly sampled data in time and/or wavelength.
 
   - *Artifact* class object parameters (see class definition for details):
     - *lambda0_pump* (float): pump central wavelength (nm)
@@ -52,7 +49,8 @@ artifact_extent_t, threshold_ellipse, threshold_cutout)*
     - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
     - NB: *threshold_cutout* > *threshold_ellipse*
 
-- **Optional function parameters**:
+
+- **Optional parameters**:
   - *lambda_time_profile* (float): Wavelength at which the time line-profile is 
                     plotted (nm, if 0 default to *lambda0_pump*).
   - *cross_pass_band_width* (int) = width of a cross-shaped pass-band in the filter along the
@@ -63,7 +61,9 @@ artifact_extent_t, threshold_ellipse, threshold_cutout)*
                     areas for upper-left and lower-right quadrants of the Fourier plane
                     (default = True, i.e. pass upper-left and lower-right quadrants).
 
+
 - **Output**: Plot displays and files written to the *output* subdirectory (created automatically if it doesn't exist)
+
 
 - **Debugging/tuning**:
   - The *threshold_ellipse* and *threshold_cutout* parameters must be adjusted to
@@ -83,21 +83,9 @@ artifact_extent_t, threshold_ellipse, threshold_cutout)*
 git clone https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter.git
 ```
 
-* Prepare a virtual environment
-  * _**[Linux][Optional]**_
-
-    ``` 
-    python3 -m venv venv/
-    source venv/bin/activate
-    ```
-  * _**[Windows][Optional]**_
-
-    ``` 
-    python3 -m venv venv/
-    cd venv
-    Scripts\activate
-    ```
 * Install all prerequisite modules
 ```
 pip3 install -r requirements.txt
 ```
+* The moisan2011 package is required, it can either be installed automatically (as above via *requirements.txt*)
+or manually from [GitHub](https://github.com/sbrisard/moisan2011).
