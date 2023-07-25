@@ -1,3 +1,7 @@
+<!-- Markdown link & img dfn's -->
+[github-repo]: https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter.git
+[github-fork]: https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter/fork
+
 ## Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map
 [![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://choosealicense.com/)
