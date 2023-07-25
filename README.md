@@ -22,6 +22,13 @@ to remove any remaining high frequency noise.
 - The moisan2011 package is required, it can either be installed automatically (see requirements.txt)
 or manually from [GitHub](https://github.com/sbrisard/moisan2011).
 
+[![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://choosealicense.com/)
+[![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968)
+[![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
+
+![Transient Grating Artifact filter image](illustration.png)
+
 **Reference**: coming soon!
 
 **Usage**: *transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
@@ -68,3 +75,29 @@ artifact_extent_t, threshold_ellipse, threshold_cutout)*
 
 **Examples**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
 
+## Installation
+
+* Checkout the repository
+
+```
+git clone https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter.git
+```
+
+* Prepare a virtual environment
+  * _**[Linux][Optional]**_
+
+    ``` 
+    python3 -m venv venv/
+    source venv/bin/activate
+    ```
+  * _**[Windows][Optional]**_
+
+    ``` 
+    python3 -m venv venv/
+    cd venv
+    Scripts\activate
+    ```
+* Install all prerequisite modules
+```
+pip3 install -r requirements.txt
+```
