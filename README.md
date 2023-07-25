@@ -86,7 +86,7 @@ git clone https://github.com/laboratoiredebiophotonique/transient_grating_artifa
 
 * Install all prerequisite modules
 ```
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
-* The moisan2011 package is required, it can either be installed automatically (as above via *requirements.txt*)
+* The moisan2011 package is required, it can either be installed automatically as above via *requirements.txt*
 or manually from [GitHub](https://github.com/sbrisard/moisan2011).
