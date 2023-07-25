@@ -6,8 +6,8 @@ spectroscopy map
 First separate the input image (time-resolved spectroscopy map) into "smooth" and
 "periodic" components as per [Moisan, 2010] to reduce the effect of the "cross" pattern
 in the Discrete Fourier transform due to the non-periodic nature of the image
-(see https://github.com/sbrisard/moisan2011), then filter the artifact from the periodic
-component in the Fourier domain using an ellipse with a cutout at the center
+(see Moisan, L. J Math Imaging Vis 39, 161–179, 2011), then filter the artifact from the
+periodic component in the Fourier domain using an ellipse with a cutout at the center
 to preserve the low-frequency content of the baseline data, and finally recombine
 the filtered periodic component with the smooth component to generate the filtered map.
 
