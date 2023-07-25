@@ -1,4 +1,4 @@
-## Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map:
+## Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map
 [![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://choosealicense.com/)
 [![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968)
@@ -27,8 +27,10 @@ to remove any remaining high frequency noise.
 **Reference**: coming soon!
 
 ## Usage:
-**transient_grating_artifact_filter**(fname, lambda0_pump, artifact_extent_lambda,
+```
+transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda,
 artifact_extent_t, threshold_ellipse, threshold_cutout)
+```
 
 - **Required parameters**:
 
