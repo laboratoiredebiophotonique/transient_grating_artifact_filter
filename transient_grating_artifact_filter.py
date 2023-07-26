@@ -249,7 +249,7 @@ class Filter:
             self.ellipse_short_axis_radius,
             self.img_binary_ellipse_rgb,
         ) = self.define_filter_ellipse()
-        self.f: np.ndarray = self.build_filter()
+        self.f: np.ndarray = self.build_binary_image_filter()
 
     @staticmethod
     def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
@@ -314,6 +314,64 @@ class Filter:
             )
         else:
             return 0.0
+
+    def plot_filter_images(self, filter_image: np.ndarray):
+        """
+        Show images of:
+            1) thresholded pixels used to determine the filter geometry
+            2) resulting binary filter image
+            3) outline of the ellipse superimposed on the periodic component DFT
+
+        Args:
+            filter_image (np.ndarray): binary filter image
+
+        Returns: None
+
+        """
+
+        fig, axs = plt.subplots(3)
+
+        # Draw thresholded ellipse binary image with major/minor axes
+        axs[0].set(
+            title="Filter ellipse binary image: "
+            f"θ = {self.artifact.angle:.1f}°, "
+            f"threshold = {self.threshold_ellipse:.2f}\n"
+            f"Long axis radius = {self.ellipse_long_axis_radius} pixels, "
+            f"short axis radius = {self.ellipse_short_axis_radius} pixels"
+        )
+        axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
+
+        # Draw binary filter image
+        axs[1].set(title="Filter image")
+        axs[1].imshow(filter_image, cmap="gray")
+
+        # Draw filter ellipse outline over periodic component DFT
+        axs[2].set(
+            title="Filter ellipse outline over binarized periodic component DFT"
+            "\nNB: data limited to 4 decade dynamic range in binarization"
+        )
+        ellipse_image_binary_outline: np.ndarray = np.zeros(
+            (self.img_specs.height, self.img_specs.width), dtype=np.uint8
+        )
+        cv.ellipse(
+            ellipse_image_binary_outline,
+            (self.img_specs.x0, self.img_specs.y0),
+            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
+            -self.artifact.angle,
+            0,
+            360,
+            1,
+            1,
+        )
+        periodic_with_ellipse_outline: np.ndarray = np.copy(self.img_dft_mag)
+        periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(
+            self.img_dft_mag
+        )
+        axs[2].imshow(periodic_with_ellipse_outline, cmap="gray")
+
+        plt.tight_layout()
+
+        return None
 
     def define_filter_ellipse(self) -> Tuple[int, int, np.ndarray]:
         """
@@ -408,10 +466,14 @@ class Filter:
             img_binary_ellipse_rgb,
         )
 
-    def build_filter(self) -> np.ndarray:
+    def build_binary_image_filter(self) -> np.ndarray:
         """
-        Build filter image: ellipse (stop band) minus the pass-band components (central
-                            cutout, central cross, upper-left/lower-right quadrants)
+        Build filter image:
+            stop-band: ellipse
+            pass-bands:
+                - central cutout
+                - central cross (optional)
+                - upper-left/lower-right quadrants (optional)
 
         Returns: binary image filter
 
@@ -475,46 +537,7 @@ class Filter:
         # For debugging/validation, show images of (1) the thresholded pixels used to
         # determine the filter geometry, (2) the resulting binary filter image,
         # and (3) the outline of the ellipse superimposed on the periodic component DFT
-        fig, axs = plt.subplots(3)
-
-        # Draw thresholded ellipse binary image with major/minor axes
-        axs[0].set(
-            title="Filter ellipse binary image: threshold = "
-            f"{self.threshold_ellipse:.2f}, "
-            f"long axis radius = {self.ellipse_long_axis_radius} pixels, "
-            f"short axis radius = {self.ellipse_short_axis_radius} pixels"
-        )
-        axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
-
-        # Draw binary filter image
-        axs[1].set(title="Filter image")
-        axs[1].imshow(filter_image, cmap="gray")
-
-        # Draw filter ellipse outline over periodic component DFT
-        axs[2].set(
-            title="Filter ellipse outline over binarized periodic component DFT"
-            "\nNB: data limited to 4 decade dynamic range in binarization"
-        )
-        ellipse_image_binary_outline: np.ndarray = np.zeros(
-            (self.img_specs.height, self.img_specs.width), dtype=np.uint8
-        )
-        cv.ellipse(
-            ellipse_image_binary_outline,
-            (self.img_specs.x0, self.img_specs.y0),
-            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
-            -self.artifact.angle,
-            0,
-            360,
-            1,
-            1,
-        )
-        periodic_with_ellipse_outline: np.ndarray = np.copy(self.img_dft_mag)
-        periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(
-            self.img_dft_mag
-        )
-        axs[2].imshow(periodic_with_ellipse_outline, cmap="gray")
-
-        plt.tight_layout()
+        self.plot_filter_images(filter_image=filter_image)
 
         # Return filter
         return filter_image
