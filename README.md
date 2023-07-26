@@ -24,7 +24,7 @@ to generate the filtered image.
 to remove any remaining high frequency noise.
 
 
-![Transient Grating Artifact filter image](illustration.png)
+![Transient Grating Artifact filter image](Graphical_abstract.tif)
 
 **Reference**: coming soon!
 
