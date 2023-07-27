@@ -10,21 +10,20 @@
 [![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
 
 - Separate the input image (time-resolved spectroscopy map) into "smooth" and
-"periodic" components as per [[Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)]
-to reduce the effect of the "cross" pattern at the center of the Discrete Fourier transform due to the 
-non-periodic nature of the image.
+"periodic" components ([[Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)]) to reduce the effect of the "cross"
+pattern at the center of the Discrete Fourier transform due to the non-periodic nature
+of the image.
 
 - Filter the artifact from the periodic component in the Fourier domain using
-an ellipse (stop-band) with a pass-band at the center to preserve the low-frequency content of the
-baseline data. The process to build the filter is described in detail in the *Filter*
-Class declaration. Additional pass-band areas can be added to fine-tune the filtering
-(see *Optional parameters* below).
+an elliptically-shaped stop-band with a pass-band at the center to preserve the
+low-frequency content of the baseline data. Additional pass-band areas can be added to
+fine-tune the filtering (see *Optional parameters* below). The process to build the
+filter is described in detail in the *Filter* class declaration. 
 
-- Recombine the filtered periodic component with the smooth component
-to generate the filtered image.
+- Recombine the filtered periodic component with the smooth component.
 
-- Apply a light gaussian filtering using a 3x3 kernel (blurring)
-to remove any remaining high frequency noise.
+- Apply a light (3x3 kernel) gaussian low-pass filter to remove any remaining
+high frequency noise.
 
 
 ![Transient Grating Artifact filter image](Graphical_Abstract.png)

@@ -4,12 +4,13 @@ Transient gradient artifact filtering in the Fourier domain from 2D time-resolve
 spectroscopy map
 
 First separate the input image (time-resolved spectroscopy map) into "smooth" and
-"periodic" components as per [Moisan, 2010] to reduce the effect of the "cross" pattern
-in the Discrete Fourier transform due to the non-periodic nature of the image
-(see Moisan, L. J Math Imaging Vis 39, 161–179, 2011), then filter the artifact from the
-periodic component in the Fourier domain using an ellipse with a pass-band at the center
-to preserve the low-frequency content of the baseline data, and finally recombine
-the filtered periodic component with the smooth component to generate the filtered map.
+"periodic" components to reduce the effect of the "cross" pattern in the Discrete
+Fourier transform due to the non-periodic nature of the image (see Moisan, L.
+J Math Imaging Vis 39, 161–179, 2011), then filter the artifact from the
+periodic component in the Fourier domain using an elliptically shaped stop-band
+with a pass-band at the center to preserve the low-frequency content of the baseline
+data, and finally recombine the filtered periodic component with the smooth component
+to generate the filtered map.
 
 """
 
@@ -93,7 +94,7 @@ class ImageSpecs:
 @dataclass
 class Artifact:
     """
-    Artifact specifications
+    Transient grating coherent artifact specifications
 
     λ0 (float): artifact center wavelength (pump center wavelength, nm)
     extent_λ (float): artifact extent along the wavelength axis (nm)
@@ -723,13 +724,13 @@ def plot_images_and_dfts(
     fig, [top_axes, bot_axes] = plt.subplots(2, len(images), sharey="row")
     plt.suptitle(
         f"Transient gradient artifact filtering with smooth & periodic component "
-        f"decomposition ([Moisan, 2010]) for image in '{fname}'\n"
+        f"decomposition for time-resolved spectroscopy map in '{fname}'\n"
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
         f"extent λ = {artifact.extent_λ:.1f} nm, "
         f"extent t = {artifact.extent_t:.2f} ps, θ = {artifact.angle:.1f}°\n"
         "Filtering parameters : "
-        f"ellipse long axis radius = {flt.ellipse_long_axis_radius} pixels, "
-        f"ellipse short axis radius = {flt.ellipse_short_axis_radius} pixels, "
+        f"center pass-band threshold = {flt.threshold_center_pass_band}, "
+        f"ellipse threshold = {flt.threshold_ellipse}, "
         f"cross pass-band width = {flt.cross_pass_band_width} pixels, "
         "upper/left+lower/right quadrant pass-band = "
         f"{flt.pass_upper_left_lower_right_quadrants}\n"
@@ -997,9 +998,10 @@ def transient_grating_artifact_filter(
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
 
-    Separate an image into smooth and periodic components as per [Moisan, 2010], filter
-    the periodic component in the Fourier domain to remove the coherent artifact, then
-    sum with the smooth component to generate the final result.
+    Separate an image into smooth and periodic components, filter the periodic component
+    in the Fourier domain to remove the artifact, sum the result with the smooth
+    component, apply 3x3 Gaussian blur to remove high frequency noise,and return
+    the final result.
 
     The input file is assumed to be in the ./data subdirectory.
     The output image files are written to the ./output subdirectory.
