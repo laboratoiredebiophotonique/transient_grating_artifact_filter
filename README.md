@@ -15,7 +15,7 @@ to reduce the effect of the "cross" pattern at the center of the Discrete Fourie
 non-periodic nature of the image.
 
 - Filter the artifact from the periodic component in the Fourier domain using
-an ellipse with a pass-band cutout at the center to preserve the low-frequency content of the
+an ellipse (Stop-band) with a pass-band at the center to preserve the low-frequency content of the
 baseline data. The process to build the filter is described in detail in the *Filter*
 Class declaration. Additional pass-band areas can be added to fine-tune the filtering
 (see *Optional parameters* below).
@@ -33,7 +33,7 @@ to remove any remaining high frequency noise.
 
 ## Usage:
 ```
-transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, artifact_extent_t, threshold_ellipse, threshold_cutout)
+transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, artifact_extent_t, threshold_ellipse, threshold_center_pass_band)
 ```
 
 - **Required parameters**:
@@ -52,8 +52,8 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
 
   - *Filter* class object parameters (see class definition for details):
     - *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
-    - *threshold_cutout* (float): threshold for filter central cutout identification ([0..1])
-    - NB: *threshold_cutout* > *threshold_ellipse*
+    - *threshold_center_pass_band* (float): threshold for central pass-band about the origin in the filter ([0..1])
+    - NB: *threshold_center_pass_band* > *threshold_ellipse*
 
 
 - **Optional parameters**:
@@ -63,7 +63,7 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
                     horizontal and vertical axes of the Fourier plane to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
                     smooth/periodic decomposition (default = 0, i.e. no cross pass-band).
-  - *pass_upper_left_lower_right_quadrants* (bool): enable/disable filter pass-band
+  - *upper_left_lower_right_quadrant_pass_band_enable* (bool): enable/disable filter pass-band
                     areas for upper-left and lower-right quadrants of the Fourier plane
                     (default = True, i.e. pass upper-left and lower-right quadrants).
 
@@ -72,7 +72,7 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
 
 
 - **Debugging/tuning**:
-  - The *threshold_ellipse* and *threshold_cutout* parameters must be adjusted to
+  - The *threshold_ellipse* and *threshold_center_pass_band* parameters must be adjusted to
     reach the optimal compromise between removing the artifact and preserving the 
     underlying baseline spectroscopy data.
   - The script draws a cross-hair pattern over the elliptical mask identified from the

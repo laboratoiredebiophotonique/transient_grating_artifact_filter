@@ -7,7 +7,7 @@ First separate the input image (time-resolved spectroscopy map) into "smooth" an
 "periodic" components as per [Moisan, 2010] to reduce the effect of the "cross" pattern
 in the Discrete Fourier transform due to the non-periodic nature of the image
 (see Moisan, L. J Math Imaging Vis 39, 161–179, 2011), then filter the artifact from the
-periodic component in the Fourier domain using an ellipse with a cutout at the center
+periodic component in the Fourier domain using an ellipse with a pass-band at the center
 to preserve the low-frequency content of the baseline data, and finally recombine
 the filtered periodic component with the smooth component to generate the filtered map.
 
@@ -193,12 +193,15 @@ class Filter:
 
     img_dft_mag (np.ndarray): DFT magnitude image used to define the filter
                               by thresholding
-    threshold_ellipse (float): threshold for defining the ellipse
-    threshold_cutout (float): threshold for defining the cutout
-    img_specs (ImageSpecs): image data specifications
+    threshold_ellipse (float): threshold for defining the ellipse (filter stop-band)
+    threshold_center_pass_band (float): threshold for defining the central pass-band
+                              area about the origin in the Fourier domain to pass
+                              the low frequency content (baseline) of the
+                              spectroscopy data
+    img_specs (ImageSpecs): spectroscopy map specifications
     artifact (Artifact): artifact specifications
     cross_pass_band_width (int) = width of cross-shaped pass-band along horizontal
-                              and vertical axes in the Fourier domain cutout from
+                              and vertical axes in the Fourier domain in
                               the filter to pass any remaining non-periodic
                               content left over from the smooth/periodic
                               decomposition (disabled if < 0)
@@ -211,7 +214,7 @@ class Filter:
 
     img_dft_mag: np.ndarray
     threshold_ellipse: float
-    threshold_cutout: float
+    threshold_center_pass_band: float
     img_specs: ImageSpecs
     artifact: Artifact
     cross_pass_band_width: int
@@ -221,7 +224,10 @@ class Filter:
         # Check thresholds and cross_pass_band_width
         if (
             (self.threshold_ellipse < 0 or self.threshold_ellipse > 1)
-            or (self.threshold_cutout < 0 or self.threshold_cutout > 1)
+            or (
+                self.threshold_center_pass_band < 0
+                or self.threshold_center_pass_band > 1
+            )
             or (
                 self.cross_pass_band_width < 0
                 or self.cross_pass_band_width > self.img_specs.width
@@ -231,16 +237,17 @@ class Filter:
             raise ValueError(
                 "One or more of the values supplied for the parameters "
                 f"threshold_ellipse ({self.threshold_ellipse:.2f}), "
-                f"threshold_cutout ({self.threshold_cutout:.2f}), "
+                f"threshold_center_pass_band ({self.threshold_center_pass_band:.2f}), "
                 f"or cross_pass_band_width ({self.cross_pass_band_width}) are "
                 "out of range (thresholds must be in the range [0..1], "
                 "the cross pass-band width must be non-negative and less than the image"
                 " height/width)!"
             )
-        if self.threshold_ellipse > self.threshold_cutout:
+        if self.threshold_ellipse > self.threshold_center_pass_band:
             raise ValueError(
                 f"threshold_ellipse ({self.threshold_ellipse})"
-                f"must be less than threshold_cutout ({self.threshold_cutout})!"
+                "must be less than threshold_center_pass_band "
+                f"({self.threshold_center_pass_band})!"
             )
 
         # Build the filter
@@ -471,7 +478,7 @@ class Filter:
         Build filter image:
             stop-band: ellipse
             pass-bands:
-                - central cutout
+                - central pass-band
                 - central cross (optional)
                 - upper-left/lower-right quadrants (optional)
 
@@ -494,16 +501,18 @@ class Filter:
             -1,
         )
 
-        # Add center cutout pass-band (pixels around origin above "threshold_cutout")
-        cutout_image: np.ndarray = self.binarize_image(
-            img=self.img_dft_mag, threshold=self.threshold_cutout
+        # Add center central pass-band (pixels around origin above
+        # "threshold_center_pass_band")
+        center_pass_band_image: np.ndarray = self.binarize_image(
+            img=self.img_dft_mag, threshold=self.threshold_center_pass_band
         )
-        if np.count_nonzero(cutout_image > 0) == 0:
+        if np.count_nonzero(center_pass_band_image > 0) == 0:
             raise ValueError(
-                f"Threshold value for cutout ({self.threshold_cutout}) is too high!"
+                "Threshold value for center pass-band "
+                f"({self.threshold_center_pass_band}) is too high!"
             )
         filter_image: np.ndarray = (
-            ellipse_image_binary.astype(np.float64) + cutout_image
+            ellipse_image_binary.astype(np.float64) + center_pass_band_image
         )
 
         # Add cross pass-bands around horizontal and vertical axes, if requested
@@ -886,7 +895,7 @@ def write_output_excel_file(
                 "artifact_extent_wavelength_nm": [artifact.extent_λ],
                 "artifact_extent_time_ps": [artifact.extent_t],
                 "threshold_ellipse": [flt.threshold_ellipse],
-                "threshold_cutout": [flt.threshold_cutout],
+                "threshold_center_pass_band": [flt.threshold_center_pass_band],
                 "cross_pass_band_width": [flt.cross_pass_band_width],
                 "pass_upper_left_lower_right_quadrants": [
                     flt.pass_upper_left_lower_right_quadrants
@@ -949,7 +958,7 @@ def write_output_matlab_file(
             "artifact_extent_wavelength_nm": artifact.extent_λ,
             "artifact_extent_time_ps": artifact.extent_t,
             "threshold_ellipse": flt.threshold_ellipse,
-            "threshold_cutout": flt.threshold_cutout,
+            "threshold_center_pass_band": flt.threshold_center_pass_band,
             "cross_pass_band_width": flt.cross_pass_band_width,
             "pass_upper_left_lower_right_quadrants": flt.pass_upper_left_lower_right_quadrants,
             "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
@@ -978,10 +987,10 @@ def transient_grating_artifact_filter(
     artifact_extent_lambda: float,
     artifact_extent_t: float,
     threshold_ellipse: float,
-    threshold_cutout: float,
+    threshold_center_pass_band: float,
     lambda_time_profile: float = 0,
     cross_pass_band_width: int = 0,
-    pass_upper_left_lower_right_quadrants: bool = True,
+    upper_left_lower_right_quadrant_pass_band_enable: bool = True,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -999,11 +1008,13 @@ def transient_grating_artifact_filter(
         artifact_extent_lambda (float): Artifact extent in the λ direction (nm)
         artifact_extent_t (float): Artifact extent in the t direction (ps)
         threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
-        threshold_cutout (float): threshold for filter cutout identification ([0..1])
+        threshold_center_pass_band (float): threshold for central pass-band
+                                            about the origin in the filter ([0..1])
         lambda_time_profile (float): Wavelength at which the time profile is plotted
-        cross_pass_band_width (int): width of cross cutout in filter (default = 0)
-        pass_upper_left_lower_right_quadrants (bool): Pass upper left and lower right
-                                              quadrants of the filter (default = False)
+        cross_pass_band_width (int): width of cross pass-band in filter (default = 0)
+        upper_left_lower_right_quadrant_pass_band_enable (bool): Pass upper left and
+                                             lower right quadrants of the filter
+                                             (default = True)
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                                   nearest larger power of two
                                                   (default = False)
@@ -1078,11 +1089,11 @@ def transient_grating_artifact_filter(
     flt: Filter = Filter(
         img_dft_mag=periodic_dft_mag,
         threshold_ellipse=threshold_ellipse,
-        threshold_cutout=threshold_cutout,
+        threshold_center_pass_band=threshold_center_pass_band,
         img_specs=img_specs,
         artifact=artifact,
         cross_pass_band_width=cross_pass_band_width,
-        pass_upper_left_lower_right_quadrants=pass_upper_left_lower_right_quadrants,
+        pass_upper_left_lower_right_quadrants=upper_left_lower_right_quadrant_pass_band_enable,
     )
 
     # Filter the artifact from the periodic component, reconstruct the filtered image
