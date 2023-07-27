@@ -341,7 +341,6 @@ class Filter:
         # Draw thresholded ellipse binary image with major/minor axes
         axs[0].set(
             title="Filter ellipse binary image: "
-            f"θ = {self.artifact.angle:.1f}°, "
             f"threshold = {self.threshold_ellipse:.2f}\n"
             f"Long axis radius = {self.ellipse_long_axis_radius} pixels, "
             f"short axis radius = {self.ellipse_short_axis_radius} pixels"
@@ -725,12 +724,15 @@ def plot_images_and_dfts(
     plt.suptitle(
         f"Transient gradient artifact filtering with smooth & periodic component "
         f"decomposition ([Moisan, 2010]) for image in '{fname}'\n"
-        "Filtering parameters : "
-        f"ellipse long axis radius = {flt.ellipse_long_axis_radius} pixels, "
-        f"ellipse short axis radius = {flt.ellipse_short_axis_radius} pixels\n"
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
         f"extent λ = {artifact.extent_λ:.1f} nm, "
-        f"extent t = {artifact.extent_t:.2f} ps\n"
+        f"extent t = {artifact.extent_t:.2f} ps, θ = {artifact.angle:.1f}°\n"
+        "Filtering parameters : "
+        f"ellipse long axis radius = {flt.ellipse_long_axis_radius} pixels, "
+        f"ellipse short axis radius = {flt.ellipse_short_axis_radius} pixels, "
+        f"cross pass-band width = {flt.cross_pass_band_width} pixels, "
+        "upper/left+lower/right quadrant pass-band = "
+        f"{flt.pass_upper_left_lower_right_quadrants}\n"
         "Top row: images, "
         "bottom row: DFT amplitudes (2X zoom, 5 decade dynamic range)\n"
     )
