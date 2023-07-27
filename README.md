@@ -1,9 +1,12 @@
 [github-repo]: https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter.git
 
 ## Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map
+
+<!---Badges-->
+<!--- [![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968) -->
+[![DOI](https://img.shields.io/badge/DOI-soon-blue.svg)](#)
 [![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter/blob/master/LICENSE)
-[![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968)
 [![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
 
 - Separate the input image (time-resolved spectroscopy map) into "smooth" and
@@ -24,7 +27,7 @@ to generate the filtered image.
 to remove any remaining high frequency noise.
 
 
-![Transient Grating Artifact filter image](Graphical_abstract.png)
+![Transient Grating Artifact filter image](Graphical_Abstract.png)
 
 **Reference**: coming soon!
 
