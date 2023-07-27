@@ -10,7 +10,7 @@
 [![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
 
 - Separate the input image (time-resolved spectroscopy map) into "smooth" and
-"periodic" components ([[Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)]) to reduce the effect of the "cross"
+"periodic" components ([Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)) to reduce the effect of the "cross"
 pattern at the center of the Discrete Fourier transform due to the non-periodic nature
 of the image.
 
@@ -62,7 +62,7 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
                     horizontal and vertical axes of the Fourier plane to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
                     smooth/periodic decomposition (default = 0, i.e. no cross pass-band).
-  - *upper_left_lower_right_quadrant_pass_band_enable* (bool): enable/disable filter pass-band
+  - *upper_left_lower_right_quadrant_pass_band* (bool): enable/disable filter pass-band
                     areas for upper-left and lower-right quadrants of the Fourier plane, excluding the
                     horizontal and vertical axes (default = True).
 

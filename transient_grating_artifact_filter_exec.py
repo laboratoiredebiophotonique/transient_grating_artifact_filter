@@ -25,7 +25,7 @@ threshold_center_pass_band: float = 0.5
 
 # Optional parameters
 cross_pass_band_width: int = 0
-upper_left_lower_right_quadrant_pass_band_enable: bool = True
+upper_left_lower_right_quadrant_pass_band: bool = True
 lambda_time_profile: float = 0
 
 # Choice of sample to simulate: "gold_film", "nano_crosses", "nano_rods", or "rhodamine"
@@ -75,7 +75,7 @@ result = transient_grating_artifact_filter(
     threshold_center_pass_band=threshold_center_pass_band,
     lambda_time_profile=lambda_time_profile,
     cross_pass_band_width=cross_pass_band_width,
-    upper_left_lower_right_quadrant_pass_band_enable=upper_left_lower_right_quadrant_pass_band_enable,
+    upper_left_lower_right_quadrant_pass_band=upper_left_lower_right_quadrant_pass_band,
 )
 
 # If running from the command line, pause for user input to keep figures visible.

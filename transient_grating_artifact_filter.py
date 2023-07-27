@@ -993,7 +993,7 @@ def transient_grating_artifact_filter(
     threshold_center_pass_band: float,
     lambda_time_profile: float = 0,
     cross_pass_band_width: int = 0,
-    upper_left_lower_right_quadrant_pass_band_enable: bool = True,
+    upper_left_lower_right_quadrant_pass_band: bool = True,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -1016,7 +1016,7 @@ def transient_grating_artifact_filter(
                                             about the origin in the filter ([0..1])
         lambda_time_profile (float): Wavelength at which the time profile is plotted
         cross_pass_band_width (int): width of cross pass-band in filter (default = 0)
-        upper_left_lower_right_quadrant_pass_band_enable (bool): Pass upper left and
+        upper_left_lower_right_quadrant_pass_band (bool): Pass upper left and
                                              lower right quadrants of the filter
                                              (default = True)
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
@@ -1097,7 +1097,7 @@ def transient_grating_artifact_filter(
         img_specs=img_specs,
         artifact=artifact,
         cross_pass_band_width=cross_pass_band_width,
-        pass_upper_left_lower_right_quadrants=upper_left_lower_right_quadrant_pass_band_enable,
+        pass_upper_left_lower_right_quadrants=upper_left_lower_right_quadrant_pass_band,
     )
 
     # Filter the artifact from the periodic component, reconstruct the filtered image
