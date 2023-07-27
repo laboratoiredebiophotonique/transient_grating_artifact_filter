@@ -15,7 +15,7 @@ to reduce the effect of the "cross" pattern at the center of the Discrete Fourie
 non-periodic nature of the image.
 
 - Filter the artifact from the periodic component in the Fourier domain using
-an ellipse (Stop-band) with a pass-band at the center to preserve the low-frequency content of the
+an ellipse (stop-band) with a pass-band at the center to preserve the low-frequency content of the
 baseline data. The process to build the filter is described in detail in the *Filter*
 Class declaration. Additional pass-band areas can be added to fine-tune the filtering
 (see *Optional parameters* below).
@@ -64,8 +64,8 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
                     (i.e. not filter) any remaining non-periodic content left over from the
                     smooth/periodic decomposition (default = 0, i.e. no cross pass-band).
   - *upper_left_lower_right_quadrant_pass_band_enable* (bool): enable/disable filter pass-band
-                    areas for upper-left and lower-right quadrants of the Fourier plane
-                    (default = True, i.e. pass upper-left and lower-right quadrants).
+                    areas for upper-left and lower-right quadrants of the Fourier plane, excluding the
+                    horizontal and vertical axes (default = True).
 
 
 - **Output**: Plot displays and files written to the *output* subdirectory (created automatically if it doesn't exist)
