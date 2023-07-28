@@ -132,14 +132,13 @@ class Artifact:
         )
         self.extent_λ_pixels: float = self.extent_λ / self.img_specs.dλ
         self.extent_t_pixels: float = self.extent_t / self.img_specs.dt
-        self.angle: float = 90 - (
-            np.degrees(
-                np.arctan(
-                    (self.extent_t_pixels * self.img_specs.width)
-                    / (self.extent_λ_pixels * self.img_specs.height)
-                )
+        self.α: float = -np.degrees(
+            np.arctan(
+                (self.extent_t_pixels * self.img_specs.width)
+                / (self.extent_λ_pixels * self.img_specs.height)
             )
         )
+        self.θ: float = 90 + self.α
 
         # Coordinate endpoints of line though center of the artifact
         slope: float = self.extent_t_pixels / self.extent_λ_pixels
@@ -364,7 +363,7 @@ class Filter:
             ellipse_image_binary_outline,
             (self.img_specs.x0, self.img_specs.y0),
             (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
-            -self.artifact.angle,
+            -self.artifact.θ,
             0,
             360,
             1,
@@ -407,24 +406,16 @@ class Filter:
         # of the axes).
         l: float = min(self.img_dft_mag.shape) / 2.5
         artifact_long_diagonal_pixel_coordinates: np.ndarray = line(
-            r0=int(self.img_specs.y0 - l * np.sin(np.radians(self.artifact.angle))),
-            c0=int(self.img_specs.x0 + l * np.cos(np.radians(self.artifact.angle))),
-            r1=int(self.img_specs.y0 + l * np.sin(np.radians(self.artifact.angle))),
-            c1=int(self.img_specs.x0 - l * np.cos(np.radians(self.artifact.angle))),
+            r0=int(self.img_specs.y0 - l * np.sin(np.radians(self.artifact.θ))),
+            c0=int(self.img_specs.x0 + l * np.cos(np.radians(self.artifact.θ))),
+            r1=int(self.img_specs.y0 + l * np.sin(np.radians(self.artifact.θ))),
+            c1=int(self.img_specs.x0 - l * np.cos(np.radians(self.artifact.θ))),
         )
         artifact_short_diagonal_pixel_coordinates: np.ndarray = line(
-            r0=int(
-                self.img_specs.y0 - l * np.sin(np.radians(self.artifact.angle + 90))
-            ),
-            c0=int(
-                self.img_specs.x0 + l * np.cos(np.radians(self.artifact.angle + 90))
-            ),
-            r1=int(
-                self.img_specs.y0 + l * np.sin(np.radians(self.artifact.angle + 90))
-            ),
-            c1=int(
-                self.img_specs.x0 - l * np.cos(np.radians(self.artifact.angle + 90))
-            ),
+            r0=int(self.img_specs.y0 - l * np.sin(np.radians(self.artifact.θ + 90))),
+            c0=int(self.img_specs.x0 + l * np.cos(np.radians(self.artifact.θ + 90))),
+            r1=int(self.img_specs.y0 + l * np.sin(np.radians(self.artifact.θ + 90))),
+            c1=int(self.img_specs.x0 - l * np.cos(np.radians(self.artifact.θ + 90))),
         )
         ellipse_long_axis_radius: int = int(
             (
@@ -460,7 +451,7 @@ class Filter:
             img_binary_ellipse_rgb,
             (self.img_specs.x0, self.img_specs.y0),
             (ellipse_long_axis_radius, ellipse_short_axis_radius),
-            -self.artifact.angle,
+            -self.artifact.θ,
             0,
             360,
             (1, 0, 0),
@@ -494,7 +485,7 @@ class Filter:
             ellipse_image_binary,
             (self.img_specs.x0, self.img_specs.y0),
             (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
-            -self.artifact.angle,
+            -self.artifact.θ,
             0,
             360,
             0,
@@ -714,7 +705,7 @@ def plot_images_and_dfts(
         artifact (Artifact): artifact specifications
         flt (Filter): filter specifications
         fname (str): Input image filename
-        image_cmap (str): colormap for images (default = "seismic"
+        image_cmap (str): colormap for images (default = "seismic")
 
     Returns: matplotlib Figure class object
 
@@ -727,7 +718,7 @@ def plot_images_and_dfts(
         f"decomposition for time-resolved spectroscopy map in '{fname}'\n"
         f"Artifact parameters : λ0 = {artifact.λ0:.1f} nm, "
         f"extent λ = {artifact.extent_λ:.1f} nm, "
-        f"extent t = {artifact.extent_t:.2f} ps, θ = {artifact.angle:.1f}°\n"
+        f"extent t = {artifact.extent_t:.2f} ps, θ = {artifact.θ:.1f}°\n"
         "Filtering parameters : "
         f"center pass-band threshold = {flt.threshold_center_pass_band}, "
         f"ellipse threshold = {flt.threshold_ellipse}, "
