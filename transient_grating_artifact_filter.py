@@ -1150,7 +1150,7 @@ def transient_grating_artifact_filter(
             "Filtered periodic\ncomponent\nuf",
             "Filtered image\nuf = s + uf",
             "Filtered image\n"
-            f"+gaussian blur (σ={flt.gaussian_blur_sigma})\n"
+            f"+gaussian blur (σ={flt.gaussian_blur_sigma:.1f})\n"
             "Blur(s + uf)",
             "Artifact\nu - uf",
         ],
