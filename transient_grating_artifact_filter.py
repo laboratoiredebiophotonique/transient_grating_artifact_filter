@@ -343,21 +343,17 @@ class Filter:
 
         # Draw thresholded ellipse binary image with major/minor axes
         axs[0].set(
-            title="Filter ellipse binary image: "
-            f"threshold = {self.threshold_ellipse:.2f}\n"
+            title="Thresholded binary binary image for identifying filter ellipse "
+            f"(threshold = {self.threshold_ellipse:.2f})\n"
             f"Long axis radius = {self.ellipse_long_axis_radius} pixels, "
             f"short axis radius = {self.ellipse_short_axis_radius} pixels"
+            "\nNB: data limited to 4 decade dynamic range in binarization"
         )
         axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
 
-        # Draw binary filter image
-        axs[1].set(title="Filter image")
-        axs[1].imshow(filter_image, cmap="gray")
-
         # Draw filter ellipse outline over periodic component DFT
-        axs[2].set(
-            title="Filter ellipse outline over binarized periodic component DFT"
-            "\nNB: data limited to 4 decade dynamic range in binarization"
+        axs[1].set(
+            title="Filter ellipse outline over periodic component DFT"
         )
         ellipse_image_binary_outline: np.ndarray = np.zeros(
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
@@ -376,7 +372,11 @@ class Filter:
         periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(
             self.img_dft_mag
         )
-        axs[2].imshow(periodic_with_ellipse_outline, cmap="gray")
+        axs[1].imshow(periodic_with_ellipse_outline, cmap="gray")
+
+        # Draw binary filter image
+        axs[2].set(title="Complete filter binary image with ellipse and pass-bands")
+        axs[2].imshow(filter_image, cmap="gray")
 
         plt.tight_layout()
 
@@ -579,7 +579,7 @@ def plot_line_profiles(
     elif λ_time_profile < img_specs.λ0 or λ_time_profile > img_specs.λ1:
         raise ValueError(
             f"λ_time_profile ({λ_time_profile}) must be between "
-            f"λ0 ({img_specs.λ0:.2f}) and λ1 ({img_specs.λ1:.2f})!"
+            rf"λ$_0$ ({img_specs.λ0:.2f}) and λ$_1$ ({img_specs.λ1:.2f})!"
         )
     else:
         λ_time_profile_pixels: int = np.abs(img_specs.λs - λ_time_profile).argmin()
@@ -594,7 +594,7 @@ def plot_line_profiles(
         ylabel=r"$\Delta$R/R",
         title=f"Raw and filtered vertical (time) line profiles at "
         f"{λ_time_profile if λ_time_profile != 0 else artifact.λ0:.2f} nm "
-        f"(λ0 = {artifact.λ0:.2f} nm)",
+        rf"(λ$_0$ = {artifact.λ0:.2f} nm)",
         xlim=(img_specs.ts[0], img_specs.ts[-1]),
     )
 
@@ -719,10 +719,10 @@ def plot_images_and_dfts(
     plt.suptitle(
         f"Transient gradient artifact filtering with smooth & periodic component "
         f"decomposition for time-resolved spectroscopy map in '{fname}'\n"
-        f"Artifact: λ0 = {artifact.λ0:.1f} nm, "
-        f"extent λ = {artifact.extent_λ:.1f} nm, "
-        f"extent t = {artifact.extent_t:.2f} ps, θ = {artifact.θ:.1f}°\n"
-        "Filter: "
+        rf"Artifact: λ$_0$ = {artifact.λ0:.1f} nm, "
+        rf"$\Delta$λ = {artifact.extent_λ:.1f} nm, "
+        rf"$\Delta$t = {artifact.extent_t:.2f} ps, θ = {artifact.θ:.1f}°"
+        "\nFilter: "
         f"center pass-band threshold = {flt.threshold_center_pass_band}, "
         f"ellipse threshold = {flt.threshold_ellipse}, "
         f"cross pass-band width = {flt.cross_pass_band_width} pixels, "
