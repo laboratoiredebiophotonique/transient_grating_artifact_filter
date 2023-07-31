@@ -209,6 +209,8 @@ class Filter:
                               and lower-right quadrants of Fourier space, excluding
                               the horizontal and vertical axes that can be passed with
                               cross_pass_band_width > 0
+    gaussian_blur_sigma (float): Standard deviation of the Gaussian blur applied
+                              to the final result
 
     """
 
@@ -219,6 +221,7 @@ class Filter:
     artifact: Artifact
     cross_pass_band_width: int
     pass_upper_left_lower_right_quadrants: bool
+    gaussian_blur_sigma: float
 
     def __post_init__(self):
         # Check thresholds and cross_pass_band_width
@@ -894,6 +897,7 @@ def write_output_excel_file(
                 "pass_upper_left_lower_right_quadrants": [
                     flt.pass_upper_left_lower_right_quadrants
                 ],
+                "Gaussian blur standard deviation": [flt.gaussian_blur_sigma],
                 "filter_ellipse_long_axis_radius_pixels": [
                     flt.ellipse_long_axis_radius
                 ],
@@ -955,6 +959,7 @@ def write_output_matlab_file(
             "threshold_center_pass_band": flt.threshold_center_pass_band,
             "cross_pass_band_width": flt.cross_pass_band_width,
             "pass_upper_left_lower_right_quadrants": flt.pass_upper_left_lower_right_quadrants,
+            "Gaussian blur standard deviation": flt.gaussian_blur_sigma,
             "filter_ellipse_long_axis_radius": flt.ellipse_long_axis_radius,
             "filter_ellipse_short_axis_radius": flt.ellipse_short_axis_radius,
         },
@@ -985,13 +990,14 @@ def transient_grating_artifact_filter(
     lambda_time_profile: float = 0,
     cross_pass_band_width: int = 0,
     upper_left_lower_right_quadrant_pass_band: bool = True,
+    gaussian_blur_sigma: float = 3,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
 
     Separate an image into smooth and periodic components, filter the periodic component
     in the Fourier domain to remove the artifact, sum the result with the smooth
-    component, apply 3x3 Gaussian blur to remove high frequency noise,and return
+    component, apply light Gaussian blur to remove high frequency noise,and return
     the final result.
 
     The input file is assumed to be in the ./data subdirectory.
@@ -1010,9 +1016,11 @@ def transient_grating_artifact_filter(
         upper_left_lower_right_quadrant_pass_band (bool): Pass upper left and
                                              lower right quadrants of the filter
                                              (default = True)
+        gaussian_blur_sigma (float): Standard deviation of the Gaussian blur applied
+                                             the to final result (default = 3)
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
-                                                  nearest larger power of two
-                                                  (default = False)
+                                             nearest larger power of two
+                                             (default = False)
 
     Returns: re-sampled raw image (np.ndarray)
              periodic image component (np.ndarray)
@@ -1089,15 +1097,16 @@ def transient_grating_artifact_filter(
         artifact=artifact,
         cross_pass_band_width=cross_pass_band_width,
         pass_upper_left_lower_right_quadrants=upper_left_lower_right_quadrant_pass_band,
+        gaussian_blur_sigma=gaussian_blur_sigma,
     )
 
     # Filter the artifact from the periodic component, reconstruct the filtered image
     periodic_filtered_dft: np.ndarray = periodic_dft * np.fft.fftshift(flt.f)
     periodic_filtered: np.ndarray = np.real(np.fft.ifft2(periodic_filtered_dft))
     img_filtered: np.ndarray = smooth + periodic_filtered
-
-    # Light 3x3 Gaussian blur of the output image to remove high frequency noise
-    img_filtered_blur: np.ndarray = ndimage.gaussian_filter(img_filtered, 3)
+    img_filtered_blur: np.ndarray = ndimage.gaussian_filter(
+        input=img_filtered, sigma=flt.gaussian_blur_sigma
+    )
 
     # Calculate various required DFT magnitude images for plotting and saving
     img_dft_mag: np.ndarray = calc_dft_log_magnitude(img_specs.img)
@@ -1140,7 +1149,9 @@ def transient_grating_artifact_filter(
             "\nSmooth\ncomponent\ns",
             "Filtered periodic\ncomponent\nuf",
             "Filtered image\nuf = s + uf",
-            "Filtered image\n with 3x3 gaussian\nBlur(uf)",
+            "Filtered image\n"
+            f"+gaussian blur (σ={flt.gaussian_blur_sigma})\n"
+            "Blur(s + uf)",
             "Artifact\nu - uf",
         ],
         img_specs=img_specs,

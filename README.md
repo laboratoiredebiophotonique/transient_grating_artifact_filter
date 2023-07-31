@@ -22,7 +22,7 @@ filter is described in detail in the *Filter* class declaration.
 
 - Recombine the filtered periodic component with the smooth component.
 
-- Apply a light (3x3 kernel) gaussian low-pass filter to remove any remaining
+- Apply a light gaussian low-pass filter to remove any remaining
 high frequency noise.
 
 
@@ -65,6 +65,9 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
   - *upper_left_lower_right_quadrant_pass_band* (bool): enable/disable filter pass-band
                     areas for upper-left and lower-right quadrants of the Fourier plane, excluding the
                     horizontal and vertical axes (default = True).
+  - *gaussian_blur_sigma* (float): standard deviation of the gaussian blur used for the
+                    final low-pass filtering (default = 3.0).
+
 
 
 - **Output**: Plot displays and files written to the *output* subdirectory (created automatically if it doesn't exist)
