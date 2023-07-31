@@ -80,8 +80,8 @@ result = transient_grating_artifact_filter(
     gaussian_blur_sigma=gaussian_blur_sigma,
 )
 
-# If running from the command line, pause for user input to keep figures visible.
-# If running in PyCharm debugger, set breakpoint below eto keep figures visible
+# If running from the command line, pause for user input to keep figures visible,
+# else if running in IDE debugger, set breakpoint below eto keep figures visible
 if sys.gettrace() is not None:
     print("Breakpoint here to keep figures visible in IDE!")
 else:
