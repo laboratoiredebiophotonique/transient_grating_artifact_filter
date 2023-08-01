@@ -192,16 +192,16 @@ class Filter:
                               spectroscopy data
     img_specs (ImageSpecs): spectroscopy map specifications
     artifact (Artifact): artifact specifications
-    cross_pass_band_width (int) = width of cross-shaped pass-band along horizontal
+    cross_pass_band_width (int) = width of cross-shaped pass-band along the horizontal
                               and vertical axes in the Fourier domain in
                               the filter to pass any remaining non-periodic
                               content left over from the smooth/periodic
-                              decomposition (disabled if < 0)
+                              decomposition (disabled if <= 0)
     pass_upper_left_lower_right_quadrants (bool) = pass (do not filter) the upper-left
                               and lower-right quadrants of Fourier space, excluding
                               the horizontal and vertical axes that can be passed with
                               cross_pass_band_width > 0
-    gaussian_blur_sigma (float): Standard deviation of the Gaussian blur applied
+    gaussian_blur_sigma (float): standard deviation of the Gaussian blur applied
                               to the final result
 
     """
@@ -256,7 +256,8 @@ class Filter:
     @staticmethod
     def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
         """
-        Binarize a log scale image using a threshold
+        Binarize a log scale image using a threshold. Limit to 4 decades of dynamic
+        range else small pixel values will unduly skew the normalization
 
         Args:
             img (np.ndarray): log scale image to be converted to binary
@@ -320,9 +321,9 @@ class Filter:
     def plot_filter_images(self, filter_image: np.ndarray):
         """
         Show images of:
-            1) thresholded pixels used to determine the filter geometry
-            2) resulting binary filter image
-            3) outline of the ellipse superimposed on the periodic component DFT
+            1) thresholded pixels used to determine the filter ellipse stop-band
+            2) outline of the ellipse superimposed on the imaged used for thresholding
+            3) resulting binary filter image
 
         Args:
             filter_image (np.ndarray): binary filter image
@@ -397,7 +398,7 @@ class Filter:
         # From the experimental parameters (time and wavelength artifact extent, which
         # yield the angle of the elliptically-shaped spectrum of the artifact in Fourier
         # space), determine the long and short diagonals of this ellipse and the lengths
-        # of the above-threshold pixels lines along these diagonals, i.e. the lengths of
+        # of the above-threshold pixel lines along these diagonals, i.e. the lengths of
         # the long and short axes of the ellipse (actually the radii, half the lengths
         # of the axes).
         l: float = min(self.img_dft_mag.shape) / 2.5
@@ -436,7 +437,7 @@ class Filter:
                 f"Threshold value for ellipse ({self.threshold_ellipse}) is too high!"
             )
 
-        # For debugging/validation purposes, build an image of the ellipse area above
+        # For debugging/validation purposes, build an image of the above
         # threshold pixels and the resulting enclosing ellipse (the filter stop band)
         img_binary_ellipse_rgb = np.repeat(
             img_binary_ellipse[:, :, np.newaxis], 3, axis=2
@@ -473,7 +474,7 @@ class Filter:
 
         """
 
-        # Draw the ellipse in a blank binary image (the "stop-band" of the filter)
+        # Draw the ellipse in an all-pass binary image (the "stop-band" of the filter)
         ellipse_image_binary: np.ndarray = np.ones(
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
@@ -530,9 +531,7 @@ class Filter:
             ] = 1
             filter_image[filter_image == 2] = 1
 
-        # For debugging/validation, show images of (1) the thresholded pixels used to
-        # determine the filter geometry, (2) the resulting binary filter image,
-        # and (3) the outline of the ellipse superimposed on the periodic component DFT
+        # For debugging/validation, show filter construction step images
         self.plot_filter_images(filter_image=filter_image)
 
         # Return filter
