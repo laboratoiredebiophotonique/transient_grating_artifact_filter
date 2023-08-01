@@ -367,8 +367,9 @@ class Filter:
 
         # Draw binary filter image
         axs[2].set(
-            title="Complete filter binary image with stop-band ellipse "
-            "and pass-bands"
+            title="Complete filter binary image\n"
+            "Stop-band 'ellipse' (pixel values = 0), "
+            "pass-band elsewhere (pixel values = 1)"
         )
         axs[2].imshow(filter_image, cmap="gray")
 
