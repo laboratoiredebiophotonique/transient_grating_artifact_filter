@@ -150,6 +150,16 @@ class Artifact:
             slope * self.x1_pixels + intercept
         )
 
+        # Convert line pixel coordinates to data coordinates
+        self.x0, self.x1 = (
+            self.img_specs.λs[self.x0_pixels],
+            self.img_specs.λs[self.x1_pixels],
+        )
+        self.y0, self.y1 = (
+            self.img_specs.ts[self.img_specs.height - self.y0_pixels],
+            self.img_specs.ts[self.img_specs.height - self.y1_pixels],
+        )
+
         # Coordinate endpoints of normal through center of the artifact
         self.normal_y0_pixels, self.normal_y1_pixels = self.y0_pixels, self.y1_pixels
         normal_slope: float = (
@@ -165,24 +175,6 @@ class Artifact:
         self.normal_length_pixels: float = np.sqrt(
             (self.normal_y0_pixels - self.normal_y1_pixels) ** 2
             + (self.normal_x0_pixels - self.normal_x1_pixels) ** 2
-        )
-
-        # Convert pixel coordinates to data coordinates
-        self.x0, self.x1 = (
-            self.img_specs.λs[self.x0_pixels],
-            self.img_specs.λs[self.x1_pixels],
-        )
-        self.y0, self.y1 = (
-            self.img_specs.ts[self.img_specs.height - self.y0_pixels],
-            self.img_specs.ts[self.img_specs.height - self.y1_pixels],
-        )
-        self.normal_x0, self.normal_x1 = (
-            self.img_specs.λs[self.normal_x0_pixels],
-            self.img_specs.λs[self.normal_x1_pixels],
-        )
-        self.normal_y0, self.normal_y1 = (
-            self.img_specs.ts[self.img_specs.height - self.normal_y0_pixels],
-            self.img_specs.ts[self.img_specs.height - self.normal_y1_pixels],
         )
 
 
@@ -352,9 +344,7 @@ class Filter:
         axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
 
         # Draw filter ellipse outline over periodic component DFT
-        axs[1].set(
-            title="Filter ellipse outline over periodic component DFT"
-        )
+        axs[1].set(title="Filter ellipse outline over periodic component DFT")
         ellipse_image_binary_outline: np.ndarray = np.zeros(
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
@@ -375,7 +365,10 @@ class Filter:
         axs[1].imshow(periodic_with_ellipse_outline, cmap="gray")
 
         # Draw binary filter image
-        axs[2].set(title="Complete filter binary image with ellipse and pass-bands")
+        axs[2].set(
+            title="Complete filter binary image with stop-band ellipse "
+            "and pass-bands"
+        )
         axs[2].imshow(filter_image, cmap="gray")
 
         plt.tight_layout()
