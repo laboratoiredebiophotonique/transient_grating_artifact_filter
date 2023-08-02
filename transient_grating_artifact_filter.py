@@ -245,7 +245,8 @@ class Filter:
                 f"({self.threshold_center_pass_band})!"
             )
 
-        # Number of decades used in binarizing log scale images
+        # Number of decades used in binarizing log scale images, else small pixel
+        # values will unduly skew the normalization (4 is a good compromise).
         self.num_decades: int = 4
 
         # Build the filter
