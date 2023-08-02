@@ -245,6 +245,9 @@ class Filter:
                 f"({self.threshold_center_pass_band})!"
             )
 
+        # Number of decades used in binarizing log scale images
+        self.num_decades: int = 4
+
         # Build the filter
         (
             self.ellipse_long_axis_radius,
@@ -253,11 +256,10 @@ class Filter:
         ) = self.define_filter_ellipse()
         self.f: np.ndarray = self.build_binary_image_filter()
 
-    @staticmethod
-    def binarize_image(img: np.ndarray, threshold: float) -> np.ndarray:
+    def binarize_image(self, img: np.ndarray, threshold: float) -> np.ndarray:
         """
-        Binarize a log scale image using a threshold. Limit to 4 decades of dynamic
-        range else small pixel values will unduly skew the normalization
+        Binarize a log scale image using a threshold. Limit to self.num_decades decades
+        of dynamic range else small pixel values will unduly skew the normalization
 
         Args:
             img (np.ndarray): log scale image to be converted to binary
@@ -267,9 +269,9 @@ class Filter:
 
         """
 
-        # Normalize log scale image to [0..1], limit to 4 decades of dynamic range else
-        # small pixel values will skew the normalization.
-        img[img < np.amax(img) - 4] = np.amax(img) - 4
+        # Normalize log scale image to [0..1], limit to self.num_decades decades of
+        # dynamic range else small pixel values will skew the normalization.
+        img[img < np.amax(img) - self.num_decades] = np.amax(img) - self.num_decades
         img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
 
         # Binarize image with threshold
@@ -339,8 +341,9 @@ class Filter:
             title="Thresholded binary binary image for identifying filter ellipse "
             f"(threshold = {self.threshold_ellipse:.2f})\n"
             f"Long axis radius = {self.ellipse_long_axis_radius} pixels, "
-            f"short axis radius = {self.ellipse_short_axis_radius} pixels"
-            "\nNB: data limited to 4 decade dynamic range in binarization"
+            f"short axis radius = {self.ellipse_short_axis_radius} pixels\n"
+            f"NB: data limited to {self.num_decades} decade dynamic range "
+            "in binarization"
         )
         axs[0].imshow(self.img_binary_ellipse_rgb, cmap="gray")
 
@@ -721,7 +724,7 @@ def plot_images_and_dfts(
         f"cross pass-band width = {flt.cross_pass_band_width} pixels, "
         "quadrant pass-band = "
         f"{flt.pass_upper_left_lower_right_quadrants}, "
-        f"Gaussian blur sigma = {flt.gaussian_blur_sigma:.1f}\n"
+        f"Gaussian blur σ = {flt.gaussian_blur_sigma:.1f}\n"
         "Top row: images, "
         "bottom row: DFT amplitudes (2X zoom, 5 decade dynamic range)\n"
     )
