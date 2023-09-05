@@ -9,8 +9,9 @@ Fourier transform due to the non-periodic nature of the image (see Moisan, L.
 J Math Imaging Vis 39, 161–179, 2011), then filter the artifact from the
 periodic component in the Fourier domain using an elliptically shaped stop-band
 with a pass-band at the center to preserve the low-frequency content of the baseline
-data, and finally recombine the filtered periodic component with the smooth component
-to generate the filtered map.
+data, and recombine the filtered periodic component with the smooth component
+to generate the filtered map. Apply a light Gaussian blur to the result to
+remove high frequency noise.
 
 """
 
@@ -82,11 +83,12 @@ class ImageSpecs:
         # non-uniform time or frequency sampling
         self.λ0, self.λ1 = self.λs_in[0], self.λs_in[-1]
         self.λs: np.ndarray = np.linspace(self.λ0, self.λ1, self.width)
-        self.dλ: float = self.λs[1] - self.λs[0]
         self.t0, self.t1 = self.ts_in[0], self.ts_in[-1]
         self.ts: np.ndarray = np.linspace(self.t0, self.t1, self.height)
-        self.dt: float = self.ts[1] - self.ts[0]
-        interp = RegularGridInterpolator((self.ts_in, self.λs_in), self.img_in)
+        self.dλ, self.dt = self.λs[1] - self.λs[0], self.ts[1] - self.ts[0]
+        interp: RegularGridInterpolator = RegularGridInterpolator(
+            (self.ts_in, self.λs_in), self.img_in
+        )
         yi, xi = np.meshgrid(self.ts, self.λs, indexing="ij")
         self.img: np.ndarray = interp((yi, xi))
 
@@ -130,8 +132,8 @@ class Artifact:
         self.t0_pixels: int = (
             self.img_specs.height - np.abs(self.img_specs.ts - 0).argmin()
         )
-        self.extent_λ_pixels: float = self.extent_λ / self.img_specs.dλ
-        self.extent_t_pixels: float = self.extent_t / self.img_specs.dt
+        self.extent_λ_pixels: float = float(self.extent_λ / self.img_specs.dλ)
+        self.extent_t_pixels: float = float(self.extent_t / self.img_specs.dt)
         self.α: float = -np.degrees(
             np.arctan(
                 (self.extent_t_pixels * self.img_specs.width)
@@ -273,17 +275,19 @@ class Filter:
         # Normalize log scale image to [0..1], limit to self.num_decades decades of
         # dynamic range else small pixel values will skew the normalization.
         img[img < np.amax(img) - self.num_decades] = np.amax(img) - self.num_decades
-        img_normalized: np.ndarray = cv.normalize(img, None, 0, 1.0, cv.NORM_MINMAX)
+        img_normalized: np.ndarray = cv.normalize(
+            src=img, dst=None, alpha=0, beta=1.0, norm_type=cv.NORM_MINMAX
+        )
 
         # Binarize image with threshold
         img_binary: np.ndarray = cv.threshold(
-            img_normalized, threshold, 1, cv.THRESH_BINARY
+            src=img_normalized, thresh=threshold, maxval=1.0, type=cv.THRESH_BINARY
         )[1]
 
         # Clean up with morphological opening (erosion/dilation), dilate a bit more to
         # round out and slightly increase the thresholded area
-        erosion = cv.erode(img_binary, np.ones((3, 3), np.uint8))
-        return cv.dilate(erosion, np.ones((5, 5), np.uint8))
+        erosion = cv.erode(src=img_binary, kernel=np.ones((3, 3), np.uint8))
+        return cv.dilate(src=erosion, kernel=np.ones((5, 5), np.uint8))
 
     @staticmethod
     def calc_line_length(
@@ -354,14 +358,14 @@ class Filter:
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
         cv.ellipse(
-            ellipse_image_binary_outline,
-            (self.img_specs.x0, self.img_specs.y0),
-            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
-            -self.artifact.θ,
-            0,
-            360,
-            1,
-            1,
+            img=ellipse_image_binary_outline,
+            center=[self.img_specs.x0, self.img_specs.y0],
+            axes=[self.ellipse_long_axis_radius, self.ellipse_short_axis_radius],
+            angle=-self.artifact.θ,
+            startAngle=0.0,
+            endAngle=360.0,
+            color=[1],
+            thickness=1,
         )
         periodic_with_ellipse_outline: np.ndarray = np.copy(self.img_dft_mag)
         periodic_with_ellipse_outline[ellipse_image_binary_outline == 1] = np.max(
@@ -450,14 +454,14 @@ class Filter:
         img_binary_ellipse_rgb[artifact_long_diagonal_pixel_coordinates] = [1, 0, 0]
         img_binary_ellipse_rgb[artifact_short_diagonal_pixel_coordinates] = [1, 0, 0]
         cv.ellipse(
-            img_binary_ellipse_rgb,
-            (self.img_specs.x0, self.img_specs.y0),
-            (ellipse_long_axis_radius, ellipse_short_axis_radius),
-            -self.artifact.θ,
-            0,
-            360,
-            (1, 0, 0),
-            1,
+            img=img_binary_ellipse_rgb,
+            center=[self.img_specs.x0, self.img_specs.y0],
+            axes=[ellipse_long_axis_radius, ellipse_short_axis_radius],
+            angle=-self.artifact.θ,
+            startAngle=0.0,
+            endAngle=360.0,
+            color=[1, 0, 0],
+            thickness=1,
         )
 
         return (
@@ -484,14 +488,14 @@ class Filter:
             (self.img_specs.height, self.img_specs.width), dtype=np.uint8
         )
         cv.ellipse(
-            ellipse_image_binary,
-            (self.img_specs.x0, self.img_specs.y0),
-            (self.ellipse_long_axis_radius, self.ellipse_short_axis_radius),
-            -self.artifact.θ,
-            0,
-            360,
-            0,
-            -1,
+            img=ellipse_image_binary,
+            center=[self.img_specs.x0, self.img_specs.y0],
+            axes=[self.ellipse_long_axis_radius, self.ellipse_short_axis_radius],
+            angle=-self.artifact.θ,
+            startAngle=0.0,
+            endAngle=360.0,
+            color=[0],
+            thickness=-1,
         )
 
         # Add center central pass-band (pixels around origin above
@@ -1015,7 +1019,7 @@ def transient_grating_artifact_filter(
                                              lower right quadrants of the filter
                                              (default = True)
         gaussian_blur_sigma (float): Standard deviation of the Gaussian blur applied
-                                             the to final result (default = 3)
+                                             to the final result (default = 3)
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                              nearest larger power of two
                                              (default = False)
@@ -1086,7 +1090,7 @@ def transient_grating_artifact_filter(
         np.fft.ifft2(smooth_dft)
     )
 
-    # Build the artifact filter binary image
+    # Create the Filter class object containing the filter specifications
     flt: Filter = Filter(
         img_dft_mag=periodic_dft_mag,
         threshold_ellipse=threshold_ellipse,
@@ -1099,6 +1103,7 @@ def transient_grating_artifact_filter(
     )
 
     # Filter the artifact from the periodic component, reconstruct the filtered image
+    # (smooth component + filtered periodic component), and apply a light Gaussian blur
     periodic_filtered_dft: np.ndarray = periodic_dft * np.fft.fftshift(flt.f)
     periodic_filtered: np.ndarray = np.real(np.fft.ifft2(periodic_filtered_dft))
     img_filtered: np.ndarray = smooth + periodic_filtered
@@ -1106,13 +1111,13 @@ def transient_grating_artifact_filter(
         input=img_filtered, sigma=flt.gaussian_blur_sigma
     )
 
-    # Calculate various required DFT magnitude images for plotting and saving
+    # Calculate various DFT magnitude images for plotting and saving
     img_dft_mag: np.ndarray = calc_dft_log_magnitude(img_specs.img)
     periodic_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(periodic_filtered)
     img_filtered_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered)
     img_filtered_final_dft_mag: np.ndarray = calc_dft_log_magnitude(img_filtered_blur)
 
-    # Plot line profiles in time, wavelength, and normal to the artifact
+    # Plot line profiles in along the time, wavelength axes, and normal to the artifact
     fig_line_profiles: Figure = plot_line_profiles(
         img=img_specs.img,
         img_filtered=img_filtered_blur,
