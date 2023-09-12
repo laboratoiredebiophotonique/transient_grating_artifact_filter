@@ -9,21 +9,27 @@
 [![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter/blob/master/LICENSE)
 [![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
 
-- Separate the input image (time-resolved spectroscopy map) into "smooth" and
-"periodic" components ([Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)) to reduce the effect of the "cross"
-pattern at the center of the Discrete Fourier transform due to the non-periodic nature
-of the image.
+- Removal of coherent artifacts is important in the analysis of time and wavelength resolved spectroscopy data.
+By taking advantage of the strong correlation between spectra acquired sequentially in time, artifact removal can be
+formulated as a 2D problem for improved effectiveness. This code implements a 2D method to remove transient grating
+coherent artifacts from femtosecond time-resolved spectroscopy data based on filtering in the Fourier domain,
+leading to better estimation of the material parameters from the measured data.
+- Algorithmic steps:
+  - Separate the input image (time-resolved spectroscopy map) into "smooth" and
+  "periodic" components ([Moisan, 2010](https://link.springer.com/article/10.1007/s10851-010-0227-1)) to reduce the effect of the "cross"
+  pattern at the center of the Discrete Fourier transform due to the non-periodic nature
+  of the image.
 
-- Filter the artifact from the periodic component in the Fourier domain using
-an elliptically-shaped stop-band with a pass-band at the center to preserve the
-low-frequency content of the baseline data. Additional pass-band areas can be added to
-fine-tune the filtering (see *Optional parameters* below). The process to build the
-filter is described in detail in the *Filter* class declaration. 
+  - Filter the artifact from the periodic component in the Fourier domain using
+  an elliptically-shaped stop-band with a pass-band at the center to preserve the
+  low-frequency content of the baseline data. Additional pass-band areas can be added to
+  fine-tune the filtering (see *Optional parameters* below). The process to build the
+  filter is described in detail in the *Filter* class declaration. 
 
-- Recombine the filtered periodic component with the smooth component.
+  - Recombine the filtered periodic component with the smooth component.
 
-- Apply a light gaussian low-pass filter to remove any remaining
-high frequency noise.
+  - Apply a light gaussian low-pass filter to remove any remaining
+  high frequency noise.
 
 
 ![Transient Grating Artifact filter image](Graphical_Abstract.png)
