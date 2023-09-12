@@ -43,7 +43,7 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
 
 - **Required parameters**:
 
-  - *fname* (str): input file in the *data* subdirectory containing the following data (see examples files in the *data*
+  - *fname* (str): input file name in the *data* subdirectory containing the following data (see examples files in the *data*
   subdirectory):
     - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
     - *Wavelength*: *nλ* wavelength samples (nm)
@@ -56,8 +56,10 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
     - *artifact_extent_lambda* (float): artifact extent in wavelength (nm)
 
   - *Filter* class object parameters (see class definition for details):
-    - *threshold_ellipse* (float): threshold for filter ellipse identification ([0..1])
-    - *threshold_center_pass_band* (float): threshold for central pass-band about the origin in the filter ([0..1])
+    - *threshold_ellipse* (float): threshold for filter elliptical stop band pixel identification
+    and clustering ([0..1])
+    - *threshold_center_pass_band* (float): threshold for filter central pass-band pixel identification
+    and clustering ([0..1])
     - NB: *threshold_center_pass_band* > *threshold_ellipse*
 
 
