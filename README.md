@@ -43,7 +43,7 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
 
 - **Required parameters**:
 
-  - *fname* (str): input file name in the *data* subdirectory containing the following data (see examples files in the *data*
+  - *fname* (str): Matlab or Excel format input file name in the *data* subdirectory containing the following data (see examples files in the *data*
   subdirectory):
     - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
     - *Wavelength*: *nλ* wavelength samples (nm)
@@ -90,7 +90,8 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
     The *artifact_extent_t* and *artifact_extent_lambda* parameters can be fine-tuned to line up the cross-hair
     with the ellipse axes to compensate for uncertainties in these parameters.
 
-**Examples**: run the script *transient_grating_artifact_filter_exec.py* or the notebook *transient_grating_artifact_filter_exec.ipynb*.
+**Examples**: run the *transient_grating_artifact_filter_exec.py* script or the
+ *transient_grating_artifact_filter_exec.ipynb* notebook.
 
 ## Installation
 
