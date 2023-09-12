@@ -66,13 +66,13 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
 - **Optional parameters**:
   - *lambda_time_profile* (float): Wavelength at which the time line-profile is 
                     plotted (nm, if 0 default to *lambda0_pump*).
-  - *cross_pass_band_width* (int) = width of a cross-shaped pass-band in the filter along the
-                    horizontal and vertical axes of the Fourier plane to pass
+  - *cross_pass_band_width* (int): width of a an additional cross-shaped pass-band in the filter along the
+                    central horizontal and vertical axes of the Fourier plane to pass
                     (i.e. not filter) any remaining non-periodic content left over from the
                     smooth/periodic decomposition (default = 0, i.e. no cross pass-band).
   - *upper_left_lower_right_quadrant_pass_band* (bool): enable/disable filter pass-band
-                    areas for upper-left and lower-right quadrants of the Fourier plane, excluding the
-                    horizontal and vertical axes (default = True).
+                    areas for upper-left and lower-right quadrants of the Fourier plane,
+                    excluding the horizontal and vertical axes (default = True).
   - *gaussian_blur_sigma* (float): standard deviation of the gaussian blur used for the
                     final low-pass filtering (default = 3.0).
 
