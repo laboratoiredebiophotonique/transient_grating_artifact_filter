@@ -994,10 +994,10 @@ def transient_grating_artifact_filter(
     artifact_extent_t: float,
     threshold_ellipse_stop_band: float,
     threshold_center_pass_band: float,
-    lambda_time_profile: float = 0,
-    cross_pass_band_width: int = 0,
     upper_left_lower_right_quadrant_pass_band: bool = True,
+    cross_pass_band_width: int = 0,
     gaussian_blur_sigma: float = 3,
+    lambda_time_profile: float = 0,
     interpolate_image_to_power_of_two: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -1021,13 +1021,13 @@ def transient_grating_artifact_filter(
         threshold_center_pass_band (float): threshold for central pass-band
                                             pixel identification and segmentation
                                             ([0..1])
-        lambda_time_profile (float): Wavelength at which the time profile is plotted
-        cross_pass_band_width (int): width of cross pass-band in filter (default = 0)
         upper_left_lower_right_quadrant_pass_band (bool): Pass upper left and
                                              lower right quadrants of the filter
                                              (default = True)
-        gaussian_blur_sigma (float): Standard deviation of the Gaussian blur applied
+        cross_pass_band_width (int): width of cross pass-band in filter (default = 0)
+        gaussian_blur_sigma (float): standard deviation of the Gaussian blur applied
                                              to the final result (default = 3)
+        lambda_time_profile (float): wavelength at which the time profile is plotted
         interpolate_image_to_power_of_two (bool): Interpolate image dimensions to
                                              nearest larger power of two
                                              (default = False)

@@ -74,10 +74,10 @@ result = transient_grating_artifact_filter(
     artifact_extent_t=artifact_extent_t,
     threshold_ellipse_stop_band=threshold_ellipse_stop_band,
     threshold_center_pass_band=threshold_center_pass_band,
-    lambda_time_profile=lambda_time_profile,
-    cross_pass_band_width=cross_pass_band_width,
     upper_left_lower_right_quadrant_pass_band=upper_left_lower_right_quadrant_pass_band,
+    cross_pass_band_width=cross_pass_band_width,
     gaussian_blur_sigma=gaussian_blur_sigma,
+    lambda_time_profile=lambda_time_profile,
 )
 
 # If running from the command line, pause for user input to keep figures visible,
