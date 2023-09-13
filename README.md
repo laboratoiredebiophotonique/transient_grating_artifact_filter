@@ -38,12 +38,13 @@ leading to better estimation of the material parameters from the measured data.
 
 ## Usage:
 ```
-transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, artifact_extent_t, threshold_ellipse, threshold_center_pass_band)
+transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, artifact_extent_t, threshold_ellipse_stop_band, threshold_center_pass_band)
 ```
 
 - **Required parameters**:
 
-  - *fname* (str): Matlab or Excel format input file name in the *data* subdirectory containing the following data (see examples files in the *data*
+  - *fname* (str): Matlab or Excel format input file name in the *data* subdirectory containing the following data
+                   (see examples files in the *data*
   subdirectory):
     - *Data*: *nt* (rows) x *nλ* (columns) spectroscopy measurements (arbitrary units)
     - *Wavelength*: *nλ* wavelength samples (nm)
@@ -56,11 +57,11 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
     - *artifact_extent_lambda* (float): artifact extent in wavelength (nm)
 
   - *Filter* class object parameters (see class definition for details):
-    - *threshold_ellipse* (float): threshold for filter elliptical stop band pixel identification
-    and clustering ([0..1])
+    - *threshold_ellipse_stop_band* (float): threshold for filter elliptical stop band pixel identification
+    and segmentation ([0..1])
     - *threshold_center_pass_band* (float): threshold for filter central pass-band pixel identification
-    and clustering ([0..1])
-    - NB: *threshold_center_pass_band* > *threshold_ellipse*
+    and segmentation ([0..1])
+    - NB: *threshold_center_pass_band* > *threshold_ellipse_stop_band*
 
 
 - **Optional parameters**:
@@ -82,11 +83,11 @@ transient_grating_artifact_filter(fname, lambda0_pump, artifact_extent_lambda, a
 
 
 - **Debugging/tuning**:
-  - The *threshold_ellipse* and *threshold_center_pass_band* parameters must be adjusted to
+  - The *threshold_ellipse_stop_band* and *threshold_center_pass_band* parameters must be adjusted to
     reach the optimal compromise between removing the artifact and preserving the 
     underlying baseline spectroscopy data.
   - The script draws a cross-hair pattern based on the *artifact_extent_t* and *artifact_extent_lambda* 
-    parameters over the elliptical portion of the filter mask identified with *threshold_ellipse*.
+    parameters over the elliptical portion of the filter mask identified with *threshold_ellipse_stop_band*.
     The *artifact_extent_t* and *artifact_extent_lambda* parameters can be fine-tuned to line up the cross-hair
     with the ellipse axes to compensate for uncertainties in these parameters.
 

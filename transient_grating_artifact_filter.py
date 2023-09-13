@@ -187,7 +187,8 @@ class Filter:
 
     img_dft_mag (np.ndarray): DFT magnitude image used to define the filter
                               by thresholding
-    threshold_ellipse (float): threshold for defining the ellipse (filter stop-band)
+    threshold_ellipse_stop_band (float): threshold for defining the ellipse-shaped
+                              filter stop-band
     threshold_center_pass_band (float): threshold for defining the central pass-band
                               area about the origin in the Fourier domain to pass
                               the low frequency content (baseline) of the
@@ -209,7 +210,7 @@ class Filter:
     """
 
     img_dft_mag: np.ndarray
-    threshold_ellipse: float
+    threshold_ellipse_stop_band: float
     threshold_center_pass_band: float
     img_specs: ImageSpecs
     artifact: Artifact
@@ -220,7 +221,10 @@ class Filter:
     def __post_init__(self):
         # Check thresholds and cross_pass_band_width
         if (
-            (self.threshold_ellipse < 0 or self.threshold_ellipse > 1)
+            (
+                self.threshold_ellipse_stop_band < 0
+                or self.threshold_ellipse_stop_band > 1
+            )
             or (
                 self.threshold_center_pass_band < 0
                 or self.threshold_center_pass_band > 1
@@ -233,17 +237,17 @@ class Filter:
         ):
             raise ValueError(
                 "One or more of the values supplied for the parameters "
-                f"threshold_ellipse ({self.threshold_ellipse:.2f}), "
-                f"threshold_center_pass_band ({self.threshold_center_pass_band:.2f}), "
+                f"threshold_ellipse_stop_band ({self.threshold_ellipse_stop_band:.2f}),"
+                f" threshold_center_pass_band ({self.threshold_center_pass_band:.2f}), "
                 f"or cross_pass_band_width ({self.cross_pass_band_width}) are "
                 "out of range (thresholds must be in the range [0..1], "
                 "the cross pass-band width must be non-negative and less than the image"
                 " height/width)!"
             )
-        if self.threshold_ellipse > self.threshold_center_pass_band:
+        if self.threshold_ellipse_stop_band > self.threshold_center_pass_band:
             raise ValueError(
-                f"threshold_ellipse ({self.threshold_ellipse})"
-                "must be less than threshold_center_pass_band "
+                f"threshold_ellipse_stop_band ({self.threshold_ellipse_stop_band})"
+                " must be less than threshold_center_pass_band "
                 f"({self.threshold_center_pass_band})!"
             )
 
@@ -343,8 +347,8 @@ class Filter:
 
         # Draw thresholded ellipse binary image with major/minor axes
         axs[0].set(
-            title="Thresholded binary binary image for identifying filter ellipse "
-            f"(threshold = {self.threshold_ellipse:.2f})\n"
+            title="Thresholded binary binary image for identifying filter ellipse stop-"
+            f"band (threshold = {self.threshold_ellipse_stop_band:.2f})\n"
             f"Long axis radius = {self.ellipse_long_axis_radius} pixels, "
             f"short axis radius = {self.ellipse_short_axis_radius} pixels\n"
             f"NB: data limited to {self.num_decades} decade dynamic range "
@@ -397,11 +401,11 @@ class Filter:
         """
 
         # Binarize the periodic component DFT magnitude image using the
-        # "threshold_ellipse" parameter to determine the approximate area of the
-        # elliptically shaped spectrum of the artifact centered on the origin
+        # "threshold_ellipse_stop_band" parameter to segment the area of
+        # the elliptically shaped spectrum of the artifact centered on the origin
         # in Fourier space
         img_binary_ellipse: np.ndarray = self.binarize_image(
-            img=self.img_dft_mag, threshold=self.threshold_ellipse
+            img=self.img_dft_mag, threshold=self.threshold_ellipse_stop_band
         )
 
         # From the experimental parameters (time and wavelength artifact extent, which
@@ -443,7 +447,8 @@ class Filter:
         )
         if ellipse_long_axis_radius == 0 or ellipse_short_axis_radius == 0:
             raise ValueError(
-                f"Threshold value for ellipse ({self.threshold_ellipse}) is too high!"
+                "Threshold value for filter ellipse stop-band "
+                f"({self.threshold_ellipse_stop_band}) is too high!"
             )
 
         # For debugging/validation purposes, build an image of the above
@@ -725,7 +730,7 @@ def plot_images_and_dfts(
         rf"$\Delta$t = {artifact.extent_t:.2f} ps, θ = {artifact.θ:.1f}°"
         "\nFilter: "
         f"center pass-band threshold = {flt.threshold_center_pass_band}, "
-        f"ellipse threshold = {flt.threshold_ellipse}, "
+        f"ellipse stop-band threshold = {flt.threshold_ellipse_stop_band}, "
         f"cross pass-band width = {flt.cross_pass_band_width} pixels, "
         "quadrant pass-band = "
         f"{flt.pass_upper_left_lower_right_quadrants}, "
@@ -893,7 +898,7 @@ def write_output_excel_file(
                 "lambda0_pump_nm": [artifact.λ0],
                 "artifact_extent_wavelength_nm": [artifact.extent_λ],
                 "artifact_extent_time_ps": [artifact.extent_t],
-                "threshold_ellipse": [flt.threshold_ellipse],
+                "threshold_ellipse_stop_band": [flt.threshold_ellipse_stop_band],
                 "threshold_center_pass_band": [flt.threshold_center_pass_band],
                 "cross_pass_band_width": [flt.cross_pass_band_width],
                 "pass_upper_left_lower_right_quadrants": [
@@ -957,7 +962,7 @@ def write_output_matlab_file(
             "lambda0_pump_nm": artifact.λ0,
             "artifact_extent_wavelength_nm": artifact.extent_λ,
             "artifact_extent_time_ps": artifact.extent_t,
-            "threshold_ellipse": flt.threshold_ellipse,
+            "threshold_ellipse_stop_band": flt.threshold_ellipse_stop_band,
             "threshold_center_pass_band": flt.threshold_center_pass_band,
             "cross_pass_band_width": flt.cross_pass_band_width,
             "pass_upper_left_lower_right_quadrants": flt.pass_upper_left_lower_right_quadrants,
@@ -987,7 +992,7 @@ def transient_grating_artifact_filter(
     lambda0_pump: float,
     artifact_extent_lambda: float,
     artifact_extent_t: float,
-    threshold_ellipse: float,
+    threshold_ellipse_stop_band: float,
     threshold_center_pass_band: float,
     lambda_time_profile: float = 0,
     cross_pass_band_width: int = 0,
@@ -1010,9 +1015,12 @@ def transient_grating_artifact_filter(
         lambda0_pump (float): Pump central wavelength (nm)
         artifact_extent_lambda (float): Artifact extent in the λ direction (nm)
         artifact_extent_t (float): Artifact extent in the t direction (ps)
-        threshold_ellipse (float): threshold for filter ellipse identification ([0..1])
+        threshold_ellipse_stop_band (float): threshold for filter ellipse stop-band
+                                             pixel identification and segmentation
+                                             ([0..1])
         threshold_center_pass_band (float): threshold for central pass-band
-                                            about the origin in the filter ([0..1])
+                                            pixel identification and segmentation
+                                            ([0..1])
         lambda_time_profile (float): Wavelength at which the time profile is plotted
         cross_pass_band_width (int): width of cross pass-band in filter (default = 0)
         upper_left_lower_right_quadrant_pass_band (bool): Pass upper left and
@@ -1093,7 +1101,7 @@ def transient_grating_artifact_filter(
     # Create the Filter class object containing the filter specifications
     flt: Filter = Filter(
         img_dft_mag=periodic_dft_mag,
-        threshold_ellipse=threshold_ellipse,
+        threshold_ellipse_stop_band=threshold_ellipse_stop_band,
         threshold_center_pass_band=threshold_center_pass_band,
         img_specs=img_specs,
         artifact=artifact,
