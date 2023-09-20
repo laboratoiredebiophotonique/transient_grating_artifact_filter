@@ -1,7 +1,7 @@
 """transient_grating_artifact_filter.py
 
-Transient gradient artifact filtering in the Fourier domain from 2D time-resolved
-spectroscopy map
+Two-dimensional filtering in the Fourier domain of transient grating coherent artifacts
+in time-resolved spectroscopy
 
 First separate the input image (time-resolved spectroscopy map) into "smooth" and
 "periodic" components to reduce the effect of the "cross" pattern in the Discrete

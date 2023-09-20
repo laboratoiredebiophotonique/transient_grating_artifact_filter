@@ -1,6 +1,6 @@
 [github-repo]: https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter.git
 
-## Transient gradient artifact filtering in the Fourier domain on 2D time-resolved spectroscopy map
+## Two-dimensional filtering in the Fourier domain of transient grating coherent artifacts in time-resolved spectroscopy
 
 <!---Badges-->
 <!--- [![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968) -->
