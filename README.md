@@ -4,10 +4,10 @@
 
 <!---Badges-->
 <!--- [![DOI](https://img.shields.io/badge/DOI-10.1021/acsphotonics.2c01968-blue.svg)](https://doi.org/10.1021/acsphotonics.2c01968) -->
-[![DOI](https://img.shields.io/badge/DOI-soon-blue.svg)](#)
+[![DOI](https://img.shields.io/static/v1.svg?label=DOI&message=10.1016/j.aca.2023.341820&color=blue)](https://doi.org/10.1016/j.aca.2023.341820)
 [![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://github.com/laboratoiredebiophotonique/transient_grating_artifact_filter/blob/master/LICENSE)
-[![Website](https://img.shields.io/website-up-down-green-red/https/www.usherbrooke.ca/ln2.svg)](https://www.usherbrooke.ca/ln2/recherche/photonique-integree)
+[![Website](https://img.shields.io/static/v1.svg?label=Website&message=LN2&color=blue)](https://www.usherbrooke.ca/ln2)
 
 - Removal of coherent artifacts is important in the analysis of time and wavelength resolved spectroscopy data.
 By taking advantage of the strong correlation between spectra acquired sequentially in time, artifact removal can be
@@ -34,7 +34,9 @@ leading to better estimation of the material parameters from the measured data.
 
 ![Transient Grating Artifact filter image](Graphical_Abstract.png)
 
-**Reference**: coming soon!
+**Reference**: M. Vega, J.-F. Bryche, P.-L. Karsenti, P. Gogol, M. Canva, P.G. Charette.
+*Two-dimensional filtering in the Fourier domain of transient grating coherent artifacts
+in time-resolved spectroscopy*, Analytica Chimica Acta, 2023, 341820. https://doi.org/10.1016/j.aca.2023.341820
 
 ## Usage:
 ```

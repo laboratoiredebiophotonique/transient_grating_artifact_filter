@@ -13,6 +13,11 @@ data, and recombine the filtered periodic component with the smooth component
 to generate the filtered map. Apply a light Gaussian blur to the result to
 remove high frequency noise.
 
+See: M. Vega, J.-F. Bryche, P.-L. Karsenti, P. Gogol, M. Canva, P.G. Charette. Two-dimensional filtering in the Fourier
+domain of transient grating coherent artifacts in time-resolved spectroscopy, Analytica Chimica Acta, 2023, 341820.
+https://doi.org/10.1016/j.aca.2023.341820.
+
+
 """
 
 from dataclasses import dataclass
@@ -34,7 +39,7 @@ import sys
 from typing import Tuple
 
 # Script version
-__version__: str = "0.9.0"
+__version__: str = "1.0.0"
 
 
 @dataclass
